@@ -6,11 +6,11 @@ The data linkage application is designed to disambiguate patients across sites /
 3.	Disambiguation / matching
 
 Each component is explained in more detail below:
-1.	Web interface for Project, User and Key management
+1.	Web interface for Project, User and Key management - 
 This component is designed to manage project specific Salt distribution. It allows the project managers to create projects, add users and authenticate the users. The authenticated users upload their RSA public keys and download the encrypted Salt file. 
 
-2.	Data Standardization, exceptions, and hashing
+2.	Data Standardization, exceptions, and hashing - 
 This component includes a data pipeline to digest and validate the data, standardize the data, manage data exceptions, create composite variables from patient identifiers and hash using SHA512 algorithm and Salt
 
-3.	Disambiguation / matching 
+3.	Disambiguation / matching - 
 This component allows the aggregator to merge files, disambiguate the hashes and assign Universal patient ID to matching patients
