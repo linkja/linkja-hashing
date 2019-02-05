@@ -4,6 +4,12 @@
 # Additional macOS garbage
 .DS_Store
 
+# Our convention for local stuff that should never be checked in
+**/local
+
+# Generated classes
+**/target
+
 # User-specific stuff
 **/.idea/**/workspace.xml
 **/.idea/**/tasks.xml
