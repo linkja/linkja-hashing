@@ -1,0 +1,22 @@
+alias_name,canonical_name
+id,patient_id
+patient_id,patient_id
+"patient id",patient_id
+patientid,patient_id
+patient-id,patient_id
+first_name,first_name
+"first name",first_name
+first-name,first_name
+firstname,first_name
+fname,first_name
+f_name,first_name
+f-name,first_name
+"f name",first_name
+last_name,last_name
+"last name",last_name
+last-name,last_name
+lastname,last_name
+lname,last_name
+l_name,last_name
+l-name,last_name
+"l name",last_name
