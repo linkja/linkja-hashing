@@ -1,9 +1,6 @@
-package org.linkja.Hashing;
+package org.linkja.hashing;
 
 import org.apache.commons.cli.*;
-
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
 
 public class Runner {
   public static void main(String[] args) {

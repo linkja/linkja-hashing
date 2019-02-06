@@ -1,4 +1,4 @@
-package org.linkja.Hashing;
+package org.linkja.hashing;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;

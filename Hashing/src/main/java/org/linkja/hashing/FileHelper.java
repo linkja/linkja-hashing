@@ -1,9 +1,8 @@
-package org.linkja.Hashing;
+package org.linkja.hashing;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 

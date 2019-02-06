@@ -20,3 +20,12 @@ lname,last_name
 l_name,last_name
 l-name,last_name
 "l name",last_name
+date_of_birth,date_of_birth
+dob,date_of_birth
+dateofbirth,date_of_birth
+date-of-birth,date_of_birth
+"date of birth",date_of_birth
+birthdate,date_of_birth
+birth_date,date_of_birth
+birth-date,date_of_birth
+birthday,date_of_birth

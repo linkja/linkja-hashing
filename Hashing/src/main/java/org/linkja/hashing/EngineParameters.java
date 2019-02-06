@@ -1,4 +1,4 @@
-package org.linkja.Hashing;
+package org.linkja.hashing;
 
 import java.io.File;
 import java.io.FileNotFoundException;

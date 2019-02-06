@@ -1,4 +1,4 @@
-package org.linkja.Hashing;
+package org.linkja.hashing;
 
 /**
  * An exception that should be guaranteed to be sanitized of sensitive values, and can be displayed
