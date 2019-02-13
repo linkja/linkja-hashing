@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.internal.util.reflection.FieldSetter;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class EngineTest {
 
   @Test
-  void normalizeHeader_NoChange() throws IOException {
+  void normalizeHeader_NoChange() throws IOException, URISyntaxException {
     HashMap<String, Integer> map = new HashMap<String, Integer>() {{
       put("patient_id", 1);
       put("first_name", 2);
@@ -25,7 +26,7 @@ class EngineTest {
   }
 
   @Test
-  void normalizeHeader_MixedCase() throws IOException {
+  void normalizeHeader_MixedCase() throws IOException, URISyntaxException {
     HashMap<String, Integer> map = new HashMap<String, Integer>() {{
       put("PatientID", 1);
       put("FirstName", 2);
@@ -38,7 +39,7 @@ class EngineTest {
   }
 
   @Test
-  void normalizeHeader_Spaces() throws IOException {
+  void normalizeHeader_Spaces() throws IOException, URISyntaxException {
     HashMap<String, Integer> map = new HashMap<String, Integer>() {{
       put("Patient ID", 1);
       put("First Name", 2);
@@ -51,7 +52,7 @@ class EngineTest {
   }
 
   @Test
-  void normalizeHeader_PreserveUnknownFields() throws IOException {
+  void normalizeHeader_PreserveUnknownFields() throws IOException, URISyntaxException {
     HashMap<String, Integer> map = new HashMap<String, Integer>() {{
       put("test", 1);
       put("Another", 2);

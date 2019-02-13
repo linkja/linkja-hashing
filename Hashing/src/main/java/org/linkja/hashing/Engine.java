@@ -9,7 +9,11 @@ import org.linkja.hashing.steps.ValidationFilterStep;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class Engine {
@@ -26,23 +30,38 @@ public class Engine {
           "recognized values.  Please see the project README for more information.";
 
   private EngineParameters parameters;
-  private static HashMap<String, String> canonicalHeaderNames = null;
   private DataHeaderMap patientDataHeaderMap;
+  private static HashMap<String, String> canonicalHeaderNames = null;
+  private static ArrayList<String> prefixes = null;
+  private static ArrayList<String> suffixes = null;
+
 
   public Engine(EngineParameters parameters) {
     setParameters(parameters);
     this.patientDataHeaderMap = new DataHeaderMap();
   }
 
-  public void initialize() throws IOException {
+  public void initialize() throws IOException, URISyntaxException {
+    ClassLoader classLoader = getClass().getClassLoader();
     if (this.canonicalHeaderNames == null) {
       canonicalHeaderNames = new HashMap<String, String>();
-      ClassLoader classLoader = getClass().getClassLoader();
       File file = new File(classLoader.getResource("configuration/canonical-header-names.csv").getFile());
       CSVParser parser = CSVParser.parse(file, Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader());
       for (CSVRecord csvRecord : parser) {
         canonicalHeaderNames.put(csvRecord.get(0), csvRecord.get(1));
       }
+    }
+
+    if (this.prefixes == null) {
+      this.prefixes = new ArrayList<String>();
+      Path path = Paths.get(classLoader.getResource("configuration/prefixes.txt").toURI());
+      prefixes.addAll(Files.readAllLines(path));
+    }
+
+    if (this.suffixes == null) {
+      this.suffixes = new ArrayList<String>();
+      Path path = Paths.get(classLoader.getResource("configuration/suffixes.txt").toURI());
+      suffixes.addAll(Files.readAllLines(path));
     }
   }
 
@@ -60,7 +79,7 @@ public class Engine {
     return row;
   }
 
-  public void run() throws IOException, LinkjaException {
+  public void run() throws IOException, URISyntaxException, LinkjaException {
     initialize();
 
     CSVParser parser = CSVParser.parse(parameters.getPatientFile(), Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader());
@@ -73,7 +92,7 @@ public class Engine {
 
     ArrayList<IStep> steps = new ArrayList<IStep>();
     steps.add(new ValidationFilterStep());
-    steps.add(new NormalizationStep());
+    steps.add(new NormalizationStep(this.prefixes, this.suffixes));
 
     // Because our check for unique patient IDs requires knowing every ID that has been seen, and because our processing
     // steps do not hold state, we are performing this check as we load up our worker queue.
