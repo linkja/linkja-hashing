@@ -24,6 +24,7 @@ public class Engine {
   public static final String FIRST_NAME_FIELD = "first_name";
   public static final String LAST_NAME_FIELD = "last_name";
   public static final String DATE_OF_BIRTH_FIELD = "date_of_birth";
+  public static final String SOCIAL_SECURITY_NUMBER = "social_security_number";
 
   private static final String REQUIRED_COLUMNS_EXCEPTION_MESSAGE = "We require, at a minimum, columns for patient ID, first name, last name, and date of birth.\r\n" +
           "If you have these columns present, please make sure that the column header is specified, and that the column names are in our list of " +

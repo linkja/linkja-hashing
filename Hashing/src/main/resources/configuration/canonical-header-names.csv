@@ -29,6 +29,8 @@ birthdate,date_of_birth
 birth_date,date_of_birth
 birth-date,date_of_birth
 birthday,date_of_birth
-ssn,ssn
-soc_sec_num,ssn
+social_security_number,social_security_number
+ssn,social_security_number
+soc_sec_num,social_security_number
+"soc sec num",social_security_number
 exception_flag,exception_flag

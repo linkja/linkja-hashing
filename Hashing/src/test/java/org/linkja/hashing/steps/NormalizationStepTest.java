@@ -154,16 +154,57 @@ class NormalizationStepTest {
   }
 
   @Test
-  void run_OnlyProcessNames() {
+  void run_IntegrationTests() {
     NormalizationStep step = new NormalizationStep(prefixes, suffixes);
     DataRow row = new DataRow() {{
       put(Engine.FIRST_NAME_FIELD, " MRS. JANE ");
       put(Engine.PATIENT_ID_FIELD, " MRS.   JANE ");
       put(Engine.LAST_NAME_FIELD, " SMITH III  ");
+      put(Engine.SOCIAL_SECURITY_NUMBER, "123-45-6789");
     }};
     row = step.run(row);
     assertEquals("JANE", row.get(Engine.FIRST_NAME_FIELD));
     assertEquals(" MRS.   JANE ", row.get(Engine.PATIENT_ID_FIELD));
     assertEquals("SMITH", row.get(Engine.LAST_NAME_FIELD));
+    assertEquals("6789", row.get(Engine.SOCIAL_SECURITY_NUMBER));
+  }
+
+  @Test
+  void normalizeSSN_NullEmpty() {
+    NormalizationStep step = new NormalizationStep(null, null);
+    assertNull(step.normalizeSSN(null));
+    assertEquals("", step.normalizeSSN(""));
+    assertEquals("", step.normalizeSSN("   "));
+  }
+
+  @Test
+  void normalizeSSN_RemovesNonNumeric() {
+    NormalizationStep step = new NormalizationStep(null, null);
+    assertEquals("", step.normalizeSSN("ABCDEFG"));
+    assertEquals("2345", step.normalizeSSN("ABCDEFG12345"));
+    assertEquals("2345", step.normalizeSSN("ABCDEFG  12345"));
+  }
+
+  @Test
+  void normalizeSSN_FlaggedInvalid() {
+    NormalizationStep step = new NormalizationStep(null, null);
+    assertEquals("", step.normalizeSSN("123 45 0000"));
+  }
+
+  @Test
+  void normalizeSSN_BlankShortStrings() {
+    NormalizationStep step = new NormalizationStep(null, null);
+    assertEquals("", step.normalizeSSN("ABC"));
+    assertEquals("", step.normalizeSSN("123"));
+    assertEquals("", step.normalizeSSN("  123  "));
+  }
+
+  @Test
+  void normalizeSSN_FullSSNConverted() {
+    NormalizationStep step = new NormalizationStep(null, null);
+    assertEquals("6789", step.normalizeSSN("123-45-6789"));
+    assertEquals("6789", step.normalizeSSN("123456789"));
+    assertEquals("6789", step.normalizeSSN("123 45 6789"));
+    assertEquals("6789", step.normalizeSSN(" 1 2 3 4 5 6 7 8 9 "));
   }
 }

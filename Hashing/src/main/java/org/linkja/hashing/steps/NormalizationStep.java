@@ -7,6 +7,12 @@ import java.util.ArrayList;
 import java.util.Map;
 
 public class NormalizationStep implements IStep {
+  public static final int MIN_SSN_LENGTH = 4;
+
+  // This is a specific SSN that is of appropriate length, but is considered an invalid placeholder and should be
+  // removed
+  public static final String INVALID_SSN = "0000";
+
   private static ArrayList<String> prefixes = null;
   private static ArrayList<String> suffixes = null;
 
@@ -31,8 +37,11 @@ public class NormalizationStep implements IStep {
       // TODO - Determine if we need to make our processing more dynamic.
       // For now we will assume just the first and last name canonical fields get processed
       if (fieldName.equals(Engine.FIRST_NAME_FIELD) || fieldName.equals(Engine.LAST_NAME_FIELD)) {
-        row.put(entry.getKey(), normalizeString(
+        row.put(fieldName, normalizeString(
                 removeSuffixes(removePrefixes(entry.getValue()))));
+      }
+      else if (fieldName.equals(Engine.SOCIAL_SECURITY_NUMBER)) {
+        row.put(fieldName, normalizeSSN(entry.getValue()));
       }
     }
     return row;
@@ -43,7 +52,7 @@ public class NormalizationStep implements IStep {
    *  - Trimming spaces
    *  - Converting to upper case
    *  - Remove double spaces internally
-   *  - Replacing hyphens with a space
+   *  X- Replacing hyphens with a space
    * @param data The string data to normalize
    * @return
    */
@@ -53,7 +62,7 @@ public class NormalizationStep implements IStep {
     }
     return data
             .toUpperCase()
-            .replaceAll("-", " ")
+            //.replaceAll("-", " ")
             .replaceAll("[ ]{2,}", " ")
             .trim();
   }
@@ -96,5 +105,28 @@ public class NormalizationStep implements IStep {
     }
 
     return data;
+  }
+
+  /**
+   * Normalizes the social security number using the following rules:
+   *  - Strip all non-numeric characters
+   *  - If length >= 4, return rightmost 4 characters, else return empty string
+   * @param data
+   * @return
+   */
+  public String normalizeSSN(String data) {
+    if (data == null) {
+      return null;
+    }
+
+    String numericChars = data.replaceAll("[^0-9]", "");
+    if (numericChars == null || numericChars.length() >= MIN_SSN_LENGTH) {
+      numericChars = numericChars.substring(numericChars.length() - MIN_SSN_LENGTH);
+      if (!numericChars.equals(INVALID_SSN)) {
+        return numericChars;
+      }
+    }
+
+    return "";
   }
 }
