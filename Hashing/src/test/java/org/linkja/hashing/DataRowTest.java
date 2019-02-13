@@ -69,22 +69,20 @@ class DataRowTest {
   void shouldProcess_ExceptionFlag() {
     DataRow row = new DataRow();
     row.setException(true);
-    assertFalse(row.shouldProcess());
+    assert(row.shouldProcess());
   }
 
   @Test
   void shouldProcess_Warning() {
     DataRow row = new DataRow();
-    row.setWarning("Something went wrong");
-    assertFalse(row.shouldProcess());
-    row.setWarning("");
+    row.setWarning("Just FYI");
     assert(row.shouldProcess());
   }
 
   @Test
   void shouldProcess_InvalidReason() {
     DataRow row = new DataRow();
-    row.setInvalidReason("Something happened");
+    row.setInvalidReason("Something is wrong with this data");
     assertFalse(row.shouldProcess());
     row.setInvalidReason("");
     assert(row.shouldProcess());

@@ -22,8 +22,12 @@ public class NormalizationStep implements IStep {
    * @param suffixes A list of suffixes used by the normalization step
    */
   public NormalizationStep(ArrayList<String> prefixes, ArrayList<String> suffixes) {
-    this.prefixes = prefixes;
-    this.suffixes = suffixes;
+    if (this.prefixes == null) {
+      this.prefixes = prefixes;
+    }
+    if (this.suffixes == null) {
+      this.suffixes = suffixes;
+    }
   }
 
   @Override

@@ -8,6 +8,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class EngineParameters {
+  public static final char DEFAULT_DELIMITER = ',';
+
   private static final SimpleDateFormat PrivateDateFormatter = new SimpleDateFormat("MM/dd/yyyy");
 
   private File privateKeyFile;
@@ -15,6 +17,7 @@ public class EngineParameters {
   private File patientFile;
   private Date privateDate;
   private Path outputDirectory;
+  private char delimiter = DEFAULT_DELIMITER;
   private FileHelper fileHelper;
 
   public EngineParameters() {
@@ -104,5 +107,21 @@ public class EngineParameters {
   public void setOutputDirectory(String outputDirectory) throws FileNotFoundException {
     Path path = fileHelper.pathFromString(outputDirectory);
     setOutputDirectory(path);
+  }
+
+  public char getDelimiter() {
+    return delimiter;
+  }
+
+  public void setDelimiter(char delimiter) throws LinkjaException {
+    String delimiterString = new String(new char[] { delimiter });
+    setDelimiter(delimiterString);
+  }
+
+  public void setDelimiter(String delimiter) throws LinkjaException {
+    if (delimiter == null || delimiter.trim().length() != 1) {
+      throw new LinkjaException("You may specify one non-whitespace character as your delimiter");
+    }
+    this.delimiter = delimiter.trim().charAt(0);
   }
 }

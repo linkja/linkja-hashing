@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class EngineTest {
 
   @Test
-  void normalizeHeader_NoChange() throws IOException, URISyntaxException {
+  void normalizeHeader_NoChange() throws IOException, URISyntaxException, LinkjaException {
     HashMap<String, Integer> map = new HashMap<String, Integer>() {{
       put("patient_id", 1);
       put("first_name", 2);
@@ -26,7 +26,7 @@ class EngineTest {
   }
 
   @Test
-  void normalizeHeader_MixedCase() throws IOException, URISyntaxException {
+  void normalizeHeader_MixedCase() throws IOException, URISyntaxException, LinkjaException {
     HashMap<String, Integer> map = new HashMap<String, Integer>() {{
       put("PatientID", 1);
       put("FirstName", 2);
@@ -39,7 +39,7 @@ class EngineTest {
   }
 
   @Test
-  void normalizeHeader_Spaces() throws IOException, URISyntaxException {
+  void normalizeHeader_Spaces() throws IOException, URISyntaxException, LinkjaException {
     HashMap<String, Integer> map = new HashMap<String, Integer>() {{
       put("Patient ID", 1);
       put("First Name", 2);
@@ -52,7 +52,7 @@ class EngineTest {
   }
 
   @Test
-  void normalizeHeader_PreserveUnknownFields() throws IOException, URISyntaxException {
+  void normalizeHeader_PreserveUnknownFields() throws IOException, URISyntaxException, LinkjaException {
     HashMap<String, Integer> map = new HashMap<String, Integer>() {{
       put("test", 1);
       put("Another", 2);

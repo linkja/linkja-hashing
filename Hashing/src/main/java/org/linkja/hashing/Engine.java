@@ -3,6 +3,7 @@ package org.linkja.hashing;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.linkja.hashing.steps.ExceptionStep;
 import org.linkja.hashing.steps.IStep;
 import org.linkja.hashing.steps.NormalizationStep;
 import org.linkja.hashing.steps.ValidationFilterStep;
@@ -35,6 +36,7 @@ public class Engine {
   private static HashMap<String, String> canonicalHeaderNames = null;
   private static ArrayList<String> prefixes = null;
   private static ArrayList<String> suffixes = null;
+  private static HashMap<String, String> genericNames = null;
 
 
   public Engine(EngineParameters parameters) {
@@ -42,7 +44,7 @@ public class Engine {
     this.patientDataHeaderMap = new DataHeaderMap();
   }
 
-  public void initialize() throws IOException, URISyntaxException {
+  public void initialize() throws IOException, URISyntaxException, LinkjaException {
     ClassLoader classLoader = getClass().getClassLoader();
     if (this.canonicalHeaderNames == null) {
       canonicalHeaderNames = new HashMap<String, String>();
@@ -64,6 +66,17 @@ public class Engine {
       Path path = Paths.get(classLoader.getResource("configuration/suffixes.txt").toURI());
       suffixes.addAll(Files.readAllLines(path));
     }
+
+    if (this.genericNames == null) {
+      this.genericNames = new HashMap<String, String>();
+      File file = new File(classLoader.getResource("configuration/generic-names.csv").getFile());
+      CSVParser parser = CSVParser.parse(file, Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader());
+      for (CSVRecord csvRecord : parser) {
+        String name = csvRecord.get(0);
+        String match = csvRecord.get(1);
+        ExceptionStep.addMatchRuleToCollection(name, match, csvRecord.getRecordNumber(), this.genericNames);
+      }
+    }
   }
 
   /**
@@ -83,7 +96,7 @@ public class Engine {
   public void run() throws IOException, URISyntaxException, LinkjaException {
     initialize();
 
-    CSVParser parser = CSVParser.parse(parameters.getPatientFile(), Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader());
+    CSVParser parser = CSVParser.parse(parameters.getPatientFile(), Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader().withDelimiter(this.parameters.getDelimiter()));
     Map<String, Integer> csvHeaderMap = parser.getHeaderMap();
     this.patientDataHeaderMap.createFromCSVHeader(csvHeaderMap).mergeCanonicalHeaders(normalizeHeader(csvHeaderMap));
     verifyFields();

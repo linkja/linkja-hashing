@@ -62,9 +62,7 @@ public class DataRow extends HashMap<String, String> implements Cloneable {
    * @return
    */
   public boolean shouldProcess() {
-    return (!isException
-            && (this.invalidReason == null || this.invalidReason.isEmpty())
-            && (this.warning == null || this.warning.isEmpty()));
+    return (this.invalidReason == null || this.invalidReason.isEmpty());
   }
 
   @Override

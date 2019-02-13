@@ -138,4 +138,30 @@ class EngineParametersTest {
     EngineParameters parameters = new EngineParameters(fileHelperMock);
     assertThrows(FileNotFoundException.class, () -> parameters.setOutputDirectory(path));
   }
+
+  @Test
+  void setDelimiter_Default() {
+    EngineParameters parameters = new EngineParameters();
+    assertEquals(EngineParameters.DEFAULT_DELIMITER, parameters.getDelimiter());
+  }
+
+  @Test
+  void setDelimiter_Invalid() {
+    EngineParameters parameters = new EngineParameters();
+    assertThrows(LinkjaException.class, () -> parameters.setDelimiter(null));
+    assertEquals(EngineParameters.DEFAULT_DELIMITER, parameters.getDelimiter());
+    assertThrows(LinkjaException.class, () -> parameters.setDelimiter(""));
+    assertEquals(EngineParameters.DEFAULT_DELIMITER, parameters.getDelimiter());
+    assertThrows(LinkjaException.class, () -> parameters.setDelimiter("  "));
+    assertEquals(EngineParameters.DEFAULT_DELIMITER, parameters.getDelimiter());
+    assertThrows(LinkjaException.class, () -> parameters.setDelimiter("||"));
+    assertEquals(EngineParameters.DEFAULT_DELIMITER, parameters.getDelimiter());
+  }
+
+  @Test
+  void setDelimiter_Valid() throws LinkjaException {
+    EngineParameters parameters = new EngineParameters();
+    parameters.setDelimiter(" | ");
+    assertEquals('|', parameters.getDelimiter());
+  }
 }

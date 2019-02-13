@@ -35,16 +35,19 @@ class ValidationFilterStepTest {
     assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, First Name, Last Name, Date of Birth",
             row.getInvalidReason());
 
+    row.setInvalidReason(null);
     row.put(Engine.PATIENT_ID_FIELD, "1");
     row = step.checkBlankFields(row);
     assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: First Name, Last Name, Date of Birth",
             row.getInvalidReason());
 
+    row.setInvalidReason(null);
     row.put(Engine.LAST_NAME_FIELD, "Test");
     row = step.checkBlankFields(row);
     assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: First Name, Date of Birth",
             row.getInvalidReason());
 
+    row.setInvalidReason(null);
     row.put(Engine.FIRST_NAME_FIELD, "Patient");
     row = step.checkBlankFields(row);
     assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Date of Birth",

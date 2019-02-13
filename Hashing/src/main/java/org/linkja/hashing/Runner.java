@@ -19,6 +19,7 @@ public class Runner {
       parameters.setSaltFile(cmd.getOptionValue("saltFile"));
       parameters.setPatientFile(cmd.getOptionValue("patientFile"));
       parameters.setPrivateDate(cmd.getOptionValue("privateDate"));
+      parameters.setDelimiter(cmd.getOptionValue("delimiter", new String(new char[] { EngineParameters.DEFAULT_DELIMITER })));
 //      String outputDirectory = cmd.getOptionValue("outDirectory");
 //      if (outputDirectory == null || outputDirectory.equals("")) {
 //        Path path = FileSystems.getDefault().getPath(".").toAbsolutePath();
@@ -57,6 +58,10 @@ public class Runner {
     Option outputDirectoryOpt = new Option("out", "outDirectory", true, "the base directory to create output.  If not specified, will use the current directory.");
     outputDirectoryOpt.setRequired(false);
     options.addOption(outputDirectoryOpt);
+
+    Option delimiterOpt = new Option("delim", "delimiter", true, "the delimiter used within the patient data file");
+    delimiterOpt.setRequired(false);
+    options.addOption(delimiterOpt);
 
     return options;
   }
