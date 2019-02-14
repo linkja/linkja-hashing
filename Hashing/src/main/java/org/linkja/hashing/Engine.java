@@ -3,10 +3,7 @@ package org.linkja.hashing;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
-import org.linkja.hashing.steps.ExceptionStep;
-import org.linkja.hashing.steps.IStep;
-import org.linkja.hashing.steps.NormalizationStep;
-import org.linkja.hashing.steps.ValidationFilterStep;
+import org.linkja.hashing.steps.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -107,6 +104,8 @@ public class Engine {
     ArrayList<IStep> steps = new ArrayList<IStep>();
     steps.add(new ValidationFilterStep());
     steps.add(new NormalizationStep(this.prefixes, this.suffixes));
+    steps.add(new ExceptionStep(this.genericNames));
+    steps.add(new PermuteStep());
 
     // Because our check for unique patient IDs requires knowing every ID that has been seen, and because our processing
     // steps do not hold state, we are performing this check as we load up our worker queue.

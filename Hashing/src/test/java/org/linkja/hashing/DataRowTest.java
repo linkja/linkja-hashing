@@ -87,4 +87,40 @@ class DataRowTest {
     row.setInvalidReason("");
     assert(row.shouldProcess());
   }
+
+  @Test
+  void addDerivedRow_Null() {
+    DataRow row = new DataRow();
+    row.addDerivedRow(null);
+    assertNull(row.getDerivedRows());
+  }
+
+  @Test
+  void addDerivedRow_Uninitialized() {
+    DataRow row = new DataRow();
+    DataRow derivedRow = new DataRow();
+    row.addDerivedRow(derivedRow);
+    assertEquals(1, row.getDerivedRows().size());
+  }
+
+  @Test
+  void addDerivedRow_Initialized() {
+    DataRow row = new DataRow();
+    row.setDerivedRows(new ArrayList<DataRow>());
+    DataRow derivedRow = new DataRow();
+    row.addDerivedRow(derivedRow);
+    assertEquals(1, row.getDerivedRows().size());
+  }
+
+  @Test
+  void addDerivedRow_AddsToList() {
+    DataRow row = new DataRow();
+    DataRow derivedRow = new DataRow();
+    row.addDerivedRow(derivedRow);
+    assertEquals(1, row.getDerivedRows().size());
+
+    DataRow derivedRow2 = new DataRow();
+    row.addDerivedRow(derivedRow2);
+    assertEquals(2, row.getDerivedRows().size());
+  }
 }

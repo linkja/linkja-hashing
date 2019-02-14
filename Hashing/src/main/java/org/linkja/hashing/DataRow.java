@@ -57,6 +57,22 @@ public class DataRow extends HashMap<String, String> implements Cloneable {
   }
 
   /**
+   * Adds a DataRow to the derived rows collection for this particular row
+   * @param row
+   */
+  public void addDerivedRow(DataRow row) {
+    if (row == null) {
+      return;
+    }
+
+    if (this.derivedRows == null) {
+      this.derivedRows = new ArrayList<DataRow>();
+    }
+
+    this.derivedRows.add(row);
+  }
+
+  /**
    * Determine if this data row still qualifies for additional processing steps.  This can be changed by actions in
    * different processing steps.
    * @return
