@@ -81,6 +81,14 @@ public class DataRow extends HashMap<String, String> implements Cloneable {
     return (this.invalidReason == null || this.invalidReason.isEmpty());
   }
 
+  /**
+   * Quick function to determine if there are any derived rows for this data row.
+   * @return
+   */
+  public boolean hasDerivedRows() {
+    return (this.derivedRows != null) && this.derivedRows.size() > 0;
+  }
+
   @Override
   public Object clone() {
     DataRow cloneRow = (DataRow)super.clone();

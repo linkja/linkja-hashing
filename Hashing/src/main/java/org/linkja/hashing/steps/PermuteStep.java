@@ -51,11 +51,14 @@ public class PermuteStep implements IStep {
     String firstPart = lastNameParts[0];
     String lastPart = lastNameParts[lastNameParts.length - 1];
 
+    // Clone the existing row (before we make any changes), for each of our new
+    // name parts
     DataRow firstPartRow = (DataRow)row.clone();
+    DataRow lastPartRow = (DataRow)row.clone();
+
     firstPartRow.put(Engine.LAST_NAME_FIELD, firstPart);
     row.addDerivedRow(firstPartRow);
 
-    DataRow lastPartRow = (DataRow)row.clone();
     lastPartRow.put(Engine.LAST_NAME_FIELD, lastPart);
     row.addDerivedRow(lastPartRow);
 

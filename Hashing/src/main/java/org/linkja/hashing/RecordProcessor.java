@@ -25,12 +25,14 @@ public class RecordProcessor {
   /**
    * Executes the configured series of instructions on a row of data
    * @param row The row of data to process.
+   * @return The data row with contents modified after all processing steps are complete
    */
-  public void run(DataRow row) {
+  public DataRow run(DataRow row) {
     for (IStep step : this.processingSteps) {
       if (step != null) {
         row = step.run(row);
       }
     }
+    return row;
   }
 }

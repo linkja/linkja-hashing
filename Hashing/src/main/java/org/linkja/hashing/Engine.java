@@ -119,8 +119,39 @@ public class Engine {
 
       DataRow row = csvRecordToDataRow(csvRecord);
       RecordProcessor processor = new RecordProcessor(steps);
-      processor.run(row);
+      dumpRow(row);
+      row = processor.run(row);
+      dumpRow(row);
     }
+  }
+
+  /**
+   * Utility method for development purposes only.  This writes a given data row
+   * to the console.
+   * @param row The DataRow to write out
+   */
+  private void dumpRow(DataRow row) {
+    dumpRow(row, 0);
+  }
+
+  /**
+   * Utility method for development purposes only.  This writes a given data row
+   * to the console.
+   * @param row The DataRow to write out
+   * @param indentLevel The number of spaces to indent output (used for nested derived rows)
+   */
+  private void dumpRow(DataRow row, int indentLevel) {
+    String indentString = new String(new char[indentLevel*2]).replace("\0", " ");
+    for (Map.Entry<String,String> entry : row.entrySet()) {
+      System.out.printf("%s%s - %s\r\n", indentString, entry.getKey(), entry.getValue());
+    }
+    if (row.hasDerivedRows()) {
+      System.out.printf("%sDERIVED ROWS:\r\n", indentString);
+      for (DataRow derivedRow : row.getDerivedRows()) {
+        dumpRow(derivedRow, indentLevel+1);
+      }
+    }
+    System.out.println();
   }
 
   /**

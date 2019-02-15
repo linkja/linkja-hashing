@@ -123,4 +123,17 @@ class DataRowTest {
     row.addDerivedRow(derivedRow2);
     assertEquals(2, row.getDerivedRows().size());
   }
+
+  @Test
+  void hasDerivedRows() {
+    DataRow row = new DataRow();
+    assertFalse(row.hasDerivedRows());
+    row.setDerivedRows(new ArrayList<DataRow>());
+    assertFalse(row.hasDerivedRows());
+    DataRow derivedRow = new DataRow();
+    row.addDerivedRow(derivedRow);
+    assert(row.hasDerivedRows());
+    row.setDerivedRows(new ArrayList<DataRow>());
+    assertFalse(row.hasDerivedRows());
+  }
 }
