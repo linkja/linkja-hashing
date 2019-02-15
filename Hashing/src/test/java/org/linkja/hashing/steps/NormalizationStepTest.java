@@ -10,7 +10,7 @@ import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@Disabled("Disabled until we reconcile when to apply different normalization steps")
+//@Disabled("Disabled until we reconcile when to apply different normalization steps")
 class NormalizationStepTest {
   private static ArrayList<String> prefixes = new ArrayList<String>() {{
     add("MISS ");
@@ -54,29 +54,48 @@ class NormalizationStepTest {
   }
 
   @Test
-  void normalizeString_ReplaceMultipleSpaces() {
+  void removeExtraSeparators_ReplaceMultipleSpaces() {
     NormalizationStep step = new NormalizationStep(prefixes, suffixes);
-    assertEquals("THIS IS A TEST", step.normalizeString("this  is  a  test"));
-    assertEquals("THIS IS A TEST", step.normalizeString("this   is   a   test"));
-    assertEquals("THIS IS A TEST", step.normalizeString("this    is a  test"));
+    assertEquals("this is a test", step.removeExtraSeparators("this  is  a  test"));
+    assertEquals("this is a test", step.removeExtraSeparators("this   is   a   test"));
+    assertEquals("this is a test", step.removeExtraSeparators("this    is a  test"));
   }
 
   @Test
-  void normalizeString_ReplaceHyphens() {
+  void removeExtraSeparators_ReplaceHyphens() {
     NormalizationStep step = new NormalizationStep(prefixes, suffixes);
-    assertEquals("TEST THIS", step.normalizeString("test--this"));
-    assertEquals("TEST THIS", step.normalizeString("test-- this"));
-    assertEquals("TEST THIS", step.normalizeString("test --this"));
-    assertEquals("TEST THIS", step.normalizeString("test - - this"));
+    assertEquals("test this", step.removeExtraSeparators("test--this"));
+    assertEquals("test this", step.removeExtraSeparators("test-- this"));
+    assertEquals("test this", step.removeExtraSeparators("test --this"));
+    assertEquals("test this", step.removeExtraSeparators("test - - this"));
   }
 
   @Test
-  void normalizeString_IntegrationTests() {
+  void removeExtraSeparators_IntegrationTests() {
     // These tests are based off of sample data
     NormalizationStep step = new NormalizationStep(prefixes, suffixes);
-    assertEquals("MARS SMYTHE", step.normalizeString("\tMARS --SMYTHE\t "));
-    assertEquals("SAROS ZOWATA", step.normalizeString("\tSAROS   ZOWATA\t "));
-    assertEquals("EL JUNE AL ALAZ", step.normalizeString("\tEL JUNE   AL ALAZ\t "));
+    assertEquals("MARS SMYTHE", step.removeExtraSeparators("\tMARS --SMYTHE\t "));
+    assertEquals("SAROS ZOWATA", step.removeExtraSeparators("\tSAROS   ZOWATA\t "));
+    assertEquals("EL JUNE AL ALAZ", step.removeExtraSeparators("\tEL JUNE   AL ALAZ\t "));
+  }
+
+  @Test
+  void removeUnwantedCharacters_NullEmpty() {
+    NormalizationStep step = new NormalizationStep(prefixes, suffixes);
+    assertNull(step.removeUnwantedCharacters(null));
+    assertEquals("", step.removeUnwantedCharacters(""));
+  }
+
+  @Test
+  void removeUnwantedCharacters_Replacements() {
+    NormalizationStep step = new NormalizationStep(prefixes, suffixes);
+    assertEquals("a B c", step.removeUnwantedCharacters(" a B c 1 2 3 . \" -"));
+  }
+
+  @Test
+  void removeUnwantedCharacters_NoReplacements() {
+    NormalizationStep step = new NormalizationStep(prefixes, suffixes);
+    assertEquals("ABC onetwothree", step.removeUnwantedCharacters("ABC onetwothree"));
   }
 
   @Test
@@ -159,8 +178,8 @@ class NormalizationStepTest {
   void run_IntegrationTests() {
     NormalizationStep step = new NormalizationStep(prefixes, suffixes);
     DataRow row = new DataRow() {{
-      put(Engine.FIRST_NAME_FIELD, " MRS. JANE ");
-      put(Engine.PATIENT_ID_FIELD, " MRS.   JANE ");
+      put(Engine.FIRST_NAME_FIELD, " MRS.   JANE ");
+      put(Engine.PATIENT_ID_FIELD, " MRS.   JANE ");  // Set like first name to confirm we don't modify it
       put(Engine.LAST_NAME_FIELD, " SMITH III  ");
       put(Engine.SOCIAL_SECURITY_NUMBER, "123-45-6789");
     }};
@@ -169,6 +188,27 @@ class NormalizationStepTest {
     assertEquals(" MRS.   JANE ", row.get(Engine.PATIENT_ID_FIELD));
     assertEquals("SMITH", row.get(Engine.LAST_NAME_FIELD));
     assertEquals("6789", row.get(Engine.SOCIAL_SECURITY_NUMBER));
+
+    // The following block is a set of regression tests we developed with the SQL implementation to ensure consistent
+    // output from both versions.
+    row.put(Engine.FIRST_NAME_FIELD, "  MR. john  ");
+    row = step.run(row);
+    assertEquals("JOHN", row.get(Engine.FIRST_NAME_FIELD));
+    row.put(Engine.FIRST_NAME_FIELD, "mr. JOHN  ");
+    row = step.run(row);
+    assertEquals("JOHN", row.get(Engine.FIRST_NAME_FIELD));
+    row.put(Engine.FIRST_NAME_FIELD, "MR.-John-");
+    row = step.run(row);
+    assertEquals("JOHN", row.get(Engine.FIRST_NAME_FIELD));
+    row.put(Engine.FIRST_NAME_FIELD, "  Mr. JOHN");
+    row = step.run(row);
+    assertEquals("JOHN", row.get(Engine.FIRST_NAME_FIELD));
+    row.put(Engine.FIRST_NAME_FIELD, "    mR.   jOhN   ");
+    row = step.run(row);
+    assertEquals("JOHN", row.get(Engine.FIRST_NAME_FIELD));
+    row.put(Engine.FIRST_NAME_FIELD, "MR. JOHN 17");
+    row = step.run(row);
+    assertEquals("JOHN", row.get(Engine.FIRST_NAME_FIELD));
   }
 
   @Test

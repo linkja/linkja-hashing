@@ -1,5 +1,6 @@
 package org.linkja.hashing.steps;
 
+import org.apache.commons.lang.StringUtils;
 import org.linkja.hashing.DataRow;
 import org.linkja.hashing.Engine;
 
@@ -38,25 +39,40 @@ public class NormalizationStep implements IStep {
 
     for (Map.Entry<String, String> entry : row.entrySet()) {
       String fieldName = entry.getKey();
+      String fieldValue = normalizeString(entry.getValue());
       // TODO - Determine if we need to make our processing more dynamic.
       // For now we will assume just the first and last name canonical fields get processed
       if (fieldName.equals(Engine.FIRST_NAME_FIELD) || fieldName.equals(Engine.LAST_NAME_FIELD)) {
-        row.put(fieldName, normalizeString(
-                removeSuffixes(removePrefixes(entry.getValue()))));
+        // Note that these functions are nested in a particular order to meet some input and output assumptions.
+        // We need extra separators removed before we can remove prefixes and suffixes.  Once that is done, we
+        // can safely remove remaining unwanted characters (e.g. because '.' is invalid, but is needed for prefix
+        // detection).
+        row.put(fieldName, removeUnwantedCharacters(
+                removeSuffixes(removePrefixes(removeExtraSeparators(fieldValue)))));
       }
       else if (fieldName.equals(Engine.SOCIAL_SECURITY_NUMBER)) {
-        row.put(fieldName, normalizeSSN(entry.getValue()));
+        row.put(fieldName, normalizeString(normalizeSSN(fieldValue)));
       }
+      // TODO - Should we assume that every string passed in should be upper-cased and trimmed?
     }
     return row;
   }
 
   /**
+   * Collection of strings that we want to strip from a string and replace with a single space.
+   * Replacement is done iteratively until none of these strings are found.
+   */
+  private static final String[] STRIP_STRING_COLLECTION = new String[] { "-", "  "};
+
+  /**
+   * After other processing steps have been completed, this specifies the characters to remove.
+   */
+  private static final String INVALID_CHARACTERS_PATTERN = "[^A-Za-z ]";
+
+  /**
    * String normalization steps include:
    *  - Trimming spaces
    *  - Converting to upper case
-   *  - Remove double spaces internally
-   *  X- Replacing hyphens with a space
    * @param data The string data to normalize
    * @return
    */
@@ -64,11 +80,39 @@ public class NormalizationStep implements IStep {
     if (data == null) {
       return null;
     }
-    return data
-            .toUpperCase()
-            //.replaceAll("-", " ")
-            .replaceAll("[ ]{2,}", " ")
-            .trim();
+    return data.toUpperCase().trim();
+  }
+
+  /**
+   * - Remove double spaces internally
+   * - Replacing hyphens with a space
+   * @param data
+   * @return
+   */
+  public String removeExtraSeparators(String data) {
+    if (data == null) {
+      return null;
+    }
+
+    while (StringUtils.indexOfAny(data, STRIP_STRING_COLLECTION) >= 0) {
+      for (String match : STRIP_STRING_COLLECTION) {
+        data = data.replaceAll(match, " ");
+      }
+    }
+    return data.trim();
+  }
+
+  /**
+   * Remove from the parameter string all invalid characters, as defined within INVALID_CHARACTERS_PATTERN
+   * @param data The string to remove unwanted characters from
+   * @return An updated string (trimmed), or null if the input is null
+   */
+  public String removeUnwantedCharacters(String data) {
+    if (data == null) {
+      return null;
+    }
+
+    return data.replaceAll(INVALID_CHARACTERS_PATTERN, "").trim();
   }
 
   /**
@@ -88,7 +132,7 @@ public class NormalizationStep implements IStep {
       }
     }
 
-    return data;
+    return data.trim();
   }
 
   /**
@@ -108,7 +152,7 @@ public class NormalizationStep implements IStep {
       }
     }
 
-    return data;
+    return data.trim();
   }
 
   /**
