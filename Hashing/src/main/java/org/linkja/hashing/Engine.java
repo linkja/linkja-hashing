@@ -104,7 +104,12 @@ public class Engine {
     ArrayList<IStep> steps = new ArrayList<IStep>();
     steps.add(new ValidationFilterStep());
     steps.add(new NormalizationStep(this.prefixes, this.suffixes));
-    steps.add(new ExceptionStep(this.genericNames));
+    // If the user doesn't want exception flags, or has already created them, we are going to skip this step in
+    // the processing pipeline.
+    // TODO - If the user said they have already provided the exception flag, should we confirm that?
+    if (this.parameters.getRecordExceptionMode() == EngineParameters.RecordExceptionMode.GenerateExceptions) {
+      steps.add(new ExceptionStep(this.genericNames));
+    }
     steps.add(new PermuteStep());
 
     // Because our check for unique patient IDs requires knowing every ID that has been seen, and because our processing

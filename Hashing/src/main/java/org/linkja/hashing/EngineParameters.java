@@ -3,12 +3,25 @@ package org.linkja.hashing;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.nio.file.Path;
+import java.security.InvalidParameterException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+/**
+ * This represents a consolidated collection of parameters needed to run the engine.
+ */
 public class EngineParameters {
+  public enum RecordExceptionMode {
+    NoExceptions, GenerateExceptions, ExceptionsIncluded
+  }
+
+  public static final int MIN_NUM_WORKER_THREADS = 1;
+
   public static final char DEFAULT_DELIMITER = ',';
+  public static final RecordExceptionMode DEFAULT_RECORD_EXCEPTION_MODE = RecordExceptionMode.NoExceptions;
+  public static final int DEFAULT_WORKER_THREADS = 3;
+  public static final boolean DEFAULT_RUN_NORMALIZATION_STEP = true;
 
   private static final SimpleDateFormat PrivateDateFormatter = new SimpleDateFormat("MM/dd/yyyy");
 
@@ -18,6 +31,9 @@ public class EngineParameters {
   private Date privateDate;
   private Path outputDirectory;
   private char delimiter = DEFAULT_DELIMITER;
+  private RecordExceptionMode recordExceptionMode = DEFAULT_RECORD_EXCEPTION_MODE;
+  private int numWorkerThreads = DEFAULT_WORKER_THREADS;
+  private boolean runNormalizationStep = DEFAULT_RUN_NORMALIZATION_STEP;
   private FileHelper fileHelper;
 
   public EngineParameters() {
@@ -123,5 +139,41 @@ public class EngineParameters {
       throw new LinkjaException("You may specify one non-whitespace character as your delimiter");
     }
     this.delimiter = delimiter.trim().charAt(0);
+  }
+
+  public RecordExceptionMode getRecordExceptionMode() {
+    return recordExceptionMode;
+  }
+
+  public void setRecordExceptionMode(RecordExceptionMode recordExceptionmode) {
+    this.recordExceptionMode = recordExceptionmode;
+  }
+
+  public int getNumWorkerThreads() {
+    return numWorkerThreads;
+  }
+
+  public void setNumWorkerThreads(int numWorkerThreads) {
+    if (numWorkerThreads < MIN_NUM_WORKER_THREADS) {
+      throw new InvalidParameterException(String.format("The number of worker threads must be >=%d", MIN_NUM_WORKER_THREADS));
+    }
+    this.numWorkerThreads = numWorkerThreads;
+  }
+
+  public void setNumWorkerThreads(String numWorkerThreads) {
+    setNumWorkerThreads(Integer.parseInt(numWorkerThreads.trim()));
+  }
+
+  public boolean isRunNormalizationStep() {
+    return runNormalizationStep;
+  }
+
+  public void setRunNormalizationStep(boolean runNormalizationStep) {
+    this.runNormalizationStep = runNormalizationStep;
+  }
+
+  public void setRunNormalizationStep(String runNormalization) {
+    this.runNormalizationStep = (runNormalization == null) ?
+            EngineParameters.DEFAULT_RUN_NORMALIZATION_STEP: Boolean.parseBoolean(runNormalization.trim());
   }
 }

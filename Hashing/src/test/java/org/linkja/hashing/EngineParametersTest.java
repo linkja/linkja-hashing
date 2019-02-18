@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.InvalidParameterException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -163,5 +164,52 @@ class EngineParametersTest {
     EngineParameters parameters = new EngineParameters();
     parameters.setDelimiter(" | ");
     assertEquals('|', parameters.getDelimiter());
+  }
+
+  @Test
+  void setNumWorkerThreads_Conversion() {
+    EngineParameters parameters = new EngineParameters();
+    parameters.setNumWorkerThreads("12");
+    assertEquals(12, parameters.getNumWorkerThreads());
+    parameters.setNumWorkerThreads(" 13 ");
+    assertEquals(13, parameters.getNumWorkerThreads());
+  }
+
+  @Test
+  void setNumWorkerThreads_Invalid() {
+    EngineParameters parameters = new EngineParameters();
+    assertThrows(NumberFormatException.class, () -> parameters.setNumWorkerThreads("abc"));
+    assertThrows(InvalidParameterException.class, () -> parameters.setNumWorkerThreads("0"));
+    assertThrows(InvalidParameterException.class, () -> parameters.setNumWorkerThreads("-1"));
+    assertThrows(InvalidParameterException.class, () -> parameters.setNumWorkerThreads(0));
+    assertThrows(InvalidParameterException.class, () -> parameters.setNumWorkerThreads(-1));
+  }
+
+  @Test
+  void setRunNormalizationStep_Default() {
+    EngineParameters parameters = new EngineParameters();
+    assertEquals(EngineParameters.DEFAULT_RUN_NORMALIZATION_STEP, parameters.isRunNormalizationStep());
+  }
+
+  @Test
+  void setRunNormalizationStep_Null() {
+    EngineParameters parameters = new EngineParameters();
+    parameters.setRunNormalizationStep(null);
+    assertEquals(EngineParameters.DEFAULT_RUN_NORMALIZATION_STEP, parameters.isRunNormalizationStep());
+  }
+
+  @Test
+  void setRunNormalizationStep_Conversion() {
+    EngineParameters parameters = new EngineParameters();
+    parameters.setRunNormalizationStep("true");
+    assert(parameters.isRunNormalizationStep());
+    parameters.setRunNormalizationStep("True");
+    assert(parameters.isRunNormalizationStep());
+    parameters.setRunNormalizationStep("false");
+    assertFalse(parameters.isRunNormalizationStep());
+
+    // This is the way boolean conversions work in Java - if it's not "true", it's false
+    parameters.setRunNormalizationStep("blah");
+    assertFalse(parameters.isRunNormalizationStep());
   }
 }
