@@ -55,6 +55,47 @@ class ValidationFilterStepTest {
   }
 
   @Test
+  void checkBlankFields_TooShort() {
+    DataRow row = new DataRow();
+    row.put(Engine.PATIENT_ID_FIELD, "12345");
+    row.put(Engine.FIRST_NAME_FIELD, "A");
+    row.put(Engine.LAST_NAME_FIELD, "B");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "12/12/1912");
+
+    ValidationFilterStep step = new ValidationFilterStep();
+    row = step.checkBlankFields(row);
+    assertEquals("The following fields must be longer than 1 character: First Name, Last Name",
+            row.getInvalidReason());
+
+    row.setInvalidReason(null);
+    row.put(Engine.LAST_NAME_FIELD, "AB");
+    row = step.checkBlankFields(row);
+    assertEquals("The following fields must be longer than 1 character: First Name",
+            row.getInvalidReason());
+
+    row.setInvalidReason(null);
+    row.put(Engine.FIRST_NAME_FIELD, "AB");
+    row.put(Engine.LAST_NAME_FIELD, "B");
+    row = step.checkBlankFields(row);
+    assertEquals("The following fields must be longer than 1 character: Last Name",
+            row.getInvalidReason());
+  }
+
+  @Test
+  void checkBlankFields_EmptyAndTooShort() {
+    DataRow row = new DataRow();
+    row.put(Engine.PATIENT_ID_FIELD, "");
+    row.put(Engine.FIRST_NAME_FIELD, "A");
+    row.put(Engine.LAST_NAME_FIELD, "B");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "");
+
+    ValidationFilterStep step = new ValidationFilterStep();
+    row = step.checkBlankFields(row);
+    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields must be longer than 1 character: First Name, Last Name",
+            row.getInvalidReason());
+  }
+
+  @Test
   void checkBlankFields_SkipsChecksIfFlaggedNotToProcess() {
     DataRow row = new DataRow();
     row.put(Engine.PATIENT_ID_FIELD, "");

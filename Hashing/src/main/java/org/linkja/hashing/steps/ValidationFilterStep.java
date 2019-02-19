@@ -4,7 +4,11 @@ import org.apache.commons.lang.StringUtils;
 import org.linkja.hashing.DataRow;
 import org.linkja.hashing.Engine;
 
+import java.util.Optional;
+
 public class ValidationFilterStep implements IStep {
+  public static final int MIN_NAME_LENGTH = 2;
+
   @Override
   public DataRow run(DataRow row) {
     checkBlankFields(row);
@@ -28,28 +32,44 @@ public class ValidationFilterStep implements IStep {
 
     // We require that the 4 primary fields have non-empty values.  Note that instead of short-circuiting on the first
     // failure, we are performing a comprehensive check to identify all issues.
-    boolean hasError = false;
-    StringBuilder builder = new StringBuilder();
-    builder.append("The following fields are missing or just contain whitespace.  They must be filled in: ");
+    boolean hasMissingError = false;
+    StringBuilder missingBuilder = new StringBuilder();
+    missingBuilder.append("The following fields are missing or just contain whitespace.  They must be filled in: ");
+    boolean hasLengthError = false;
+    StringBuilder lengthBuilder = new StringBuilder();
+    lengthBuilder.append("The following fields must be longer than 1 character: ");
     if (!row.containsKey(Engine.PATIENT_ID_FIELD) || row.get(Engine.PATIENT_ID_FIELD).trim().isEmpty()) {
-      builder.append("Patient Identifier, ");
-      hasError = true;
+      missingBuilder.append("Patient Identifier, ");
+      hasMissingError = true;
     }
     if (!row.containsKey(Engine.FIRST_NAME_FIELD) || row.get(Engine.FIRST_NAME_FIELD).trim().isEmpty()) {
-      builder.append("First Name, ");
-      hasError = true;
+      missingBuilder.append("First Name, ");
+      hasMissingError = true;
+    }
+    else if (row.get(Engine.FIRST_NAME_FIELD).trim().length() < MIN_NAME_LENGTH) {
+      lengthBuilder.append("First Name, ");
+      hasLengthError = true;
     }
     if (!row.containsKey(Engine.LAST_NAME_FIELD) || row.get(Engine.LAST_NAME_FIELD).trim().isEmpty()) {
-      builder.append("Last Name, ");
-      hasError = true;
+      missingBuilder.append("Last Name, ");
+      hasMissingError = true;
+    }
+    else if (row.get(Engine.LAST_NAME_FIELD).trim().length() < MIN_NAME_LENGTH) {
+      lengthBuilder.append("Last Name, ");
+      hasLengthError = true;
     }
     if (!row.containsKey(Engine.DATE_OF_BIRTH_FIELD) || row.get(Engine.DATE_OF_BIRTH_FIELD).trim().isEmpty()) {
-      builder.append("Date of Birth, ");
-      hasError = true;
+      missingBuilder.append("Date of Birth, ");
+      hasMissingError = true;
     }
 
-    if (hasError) {
-      row.setInvalidReason(StringUtils.strip(builder.toString(), ", ").trim());
+    if (hasMissingError) {
+      row.setInvalidReason(StringUtils.strip(missingBuilder.toString(), ", ").trim());
+    }
+    if (hasLengthError) {
+      String reason = (Optional.ofNullable(row.getInvalidReason()).orElse("") + "\r\n" +
+              StringUtils.strip(lengthBuilder.toString(), ", ").trim()).trim();
+      row.setInvalidReason(reason);
     }
 
     return row;
