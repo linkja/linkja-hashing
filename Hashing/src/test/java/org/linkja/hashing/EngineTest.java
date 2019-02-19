@@ -18,7 +18,7 @@ class EngineTest {
       put("patient_id", 1);
       put("first_name", 2);
     }};
-    Engine engine = new Engine(new EngineParameters());
+    Engine engine = new Engine(new EngineParameters(), null);
     engine.initialize();
     Map<String, Integer> normalizedMap = engine.normalizeHeader(map);
     assertEquals(1, normalizedMap.get("patient_id").intValue());
@@ -31,7 +31,7 @@ class EngineTest {
       put("PatientID", 1);
       put("FirstName", 2);
     }};
-    Engine engine = new Engine(new EngineParameters());
+    Engine engine = new Engine(new EngineParameters(), null);
     engine.initialize();
     Map<String, Integer> normalizedMap = engine.normalizeHeader(map);
     assertEquals(1, normalizedMap.get("patient_id").intValue());
@@ -44,7 +44,7 @@ class EngineTest {
       put("Patient ID", 1);
       put("First Name", 2);
     }};
-    Engine engine = new Engine(new EngineParameters());
+    Engine engine = new Engine(new EngineParameters(), null);
     engine.initialize();
     Map<String, Integer> normalizedMap = engine.normalizeHeader(map);
     assertEquals(1, normalizedMap.get("patient_id").intValue());
@@ -57,7 +57,7 @@ class EngineTest {
       put("test", 1);
       put("Another", 2);
     }};
-    Engine engine = new Engine(new EngineParameters());
+    Engine engine = new Engine(new EngineParameters(), null);
     engine.initialize();
     Map<String, Integer> normalizedMap = engine.normalizeHeader(map);
     assertEquals(1, normalizedMap.get("test").intValue());
@@ -66,14 +66,14 @@ class EngineTest {
 
   @Test
   void verifyFields_Null() throws NoSuchFieldException {
-    Engine engine = new Engine(new EngineParameters());
+    Engine engine = new Engine(new EngineParameters(), null);
     FieldSetter.setField(engine, engine.getClass().getDeclaredField("patientDataHeaderMap"), null);
     assertThrows(LinkjaException.class, () -> engine.verifyFields());
   }
 
   @Test
   void verifyFields_Empty() throws NoSuchFieldException {
-    Engine engine = new Engine(new EngineParameters());
+    Engine engine = new Engine(new EngineParameters(), null);
     FieldSetter.setField(engine, engine.getClass().getDeclaredField("patientDataHeaderMap"), new DataHeaderMap());
     assertThrows(LinkjaException.class, () -> engine.verifyFields());
   }
@@ -86,7 +86,7 @@ class EngineTest {
     }};
     DataHeaderMap map = new DataHeaderMap();
     FieldSetter.setField(map, map.getClass().getDeclaredField("entries"), data);
-    Engine engine = new Engine(new EngineParameters());
+    Engine engine = new Engine(new EngineParameters(), null);
     FieldSetter.setField(engine, engine.getClass().getDeclaredField("patientDataHeaderMap"), map);
     assertThrows(LinkjaException.class, () -> engine.verifyFields());
   }
@@ -101,7 +101,7 @@ class EngineTest {
     }};
     DataHeaderMap map = new DataHeaderMap();
     FieldSetter.setField(map, map.getClass().getDeclaredField("entries"), data);
-    Engine engine = new Engine(new EngineParameters());
+    Engine engine = new Engine(new EngineParameters(), null);
     FieldSetter.setField(engine, engine.getClass().getDeclaredField("patientDataHeaderMap"), map);
     engine.verifyFields();  // Valid if no exception thrown
   }
@@ -116,7 +116,7 @@ class EngineTest {
     }};
     DataHeaderMap map = new DataHeaderMap();
     FieldSetter.setField(map, map.getClass().getDeclaredField("entries"), data);
-    Engine engine = new Engine(new EngineParameters());
+    Engine engine = new Engine(new EngineParameters(), null);
     FieldSetter.setField(engine, engine.getClass().getDeclaredField("patientDataHeaderMap"), map);
     assertThrows(LinkjaException.class, () -> engine.verifyFields());
   }
@@ -132,7 +132,7 @@ class EngineTest {
     }};
     DataHeaderMap map = new DataHeaderMap();
     FieldSetter.setField(map, map.getClass().getDeclaredField("entries"), data);
-    Engine engine = new Engine(new EngineParameters());
+    Engine engine = new Engine(new EngineParameters(), null);
     FieldSetter.setField(engine, engine.getClass().getDeclaredField("patientDataHeaderMap"), map);
     engine.verifyFields();  // Valid if no exception thrown
   }

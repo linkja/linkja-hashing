@@ -1,0 +1,5 @@
+PIDHASH,patient_id + site_id + datediff(dd,dob,'$(privateDate)')
+fnamelnamedobssn,first_name + last_name + date_of_birth + social_security_number
+lnamefnamedobssn,last_name + first_name + date_of_birth + social_security_number
+fnamelnamedob,first_name + last_name + date_of_birth
+lnamefnamedob,last_name + first_name + date_of_birth

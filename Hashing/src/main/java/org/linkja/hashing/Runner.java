@@ -1,14 +1,27 @@
 package org.linkja.hashing;
 
 import org.apache.commons.cli.*;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.security.*;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Properties;
 
 // TODO: Write unit tests for helper methods (everything but main)
 public class Runner {
+  private static String SALT_FILE_DELIMITER = ",";
+  private static int NUM_SALT_PARTS = 5;
+
   public static void main(String[] args) {
     Options options = setUpCommandLine();
     CommandLine cmd = parseCommandLine(options, args);
@@ -43,13 +56,24 @@ public class Runner {
       System.exit(1);
     }
 
+    HashParameters hashParameters = null;
     try {
-      Engine engine = new Engine(parameters);
+      hashParameters = parseProjectSalt(parameters.getSaltFile(), parameters.getPrivateKeyFile());
+    }
+    catch (Exception exc) {
+      System.out.println("ERROR - We encountered an error when trying to decrypt the salt file using the private key");
+      System.out.println(exc.getMessage());
+      System.exit(1);
+    }
+
+    try {
+      Engine engine = new Engine(parameters, hashParameters);
       engine.run();
     }
     catch (Exception exc) {
       System.out.println("ERROR - We encountered an error while processing your data file");
       System.out.println(exc.getMessage());
+      System.exit(1);
     }
   }
 
@@ -173,5 +197,41 @@ public class Runner {
     System.out.println();
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("Hashing", options);
+  }
+
+  /**
+   * Given an encrypted salt file, and a private decryption key, get out the hashing parameters that include site and
+   * project details.  Note that the HashParameters are considered sensitive information, because they are encrypted.
+   * @param saltFile
+   * @param decryptKey
+   * @return
+   * @throws Exception
+   */
+  public static HashParameters parseProjectSalt(File saltFile, File decryptKey) throws Exception {
+    Security.addProvider(new BouncyCastleProvider());
+    BufferedReader reader = new BufferedReader(new FileReader(decryptKey));
+    PEMParser parser = new PEMParser(reader);
+    PEMKeyPair pemKeyPair = (PEMKeyPair) parser.readObject();
+    KeyPair keyPair = new JcaPEMKeyConverter().getKeyPair(pemKeyPair);
+    parser.close();
+    reader.close();
+
+    Cipher decrypt = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+    decrypt.init(Cipher.DECRYPT_MODE, keyPair.getPrivate());
+    String decryptedMessage = new String(decrypt.doFinal(Files.readAllBytes(saltFile.toPath())), StandardCharsets.UTF_8);
+    String[] saltParts = decryptedMessage.split(SALT_FILE_DELIMITER);
+    if (saltParts == null || saltParts.length < NUM_SALT_PARTS) {
+      throw new LinkjaException("The salt file was not in the expected format.  Please confirm that you are referencing the correct file");
+    }
+
+    // At this point we have to assume that everything is in the right position, so we will load by position.
+    HashParameters parameters = new HashParameters();
+    parameters.setSiteId(saltParts[0]);
+    parameters.setSiteName(saltParts[1]);
+    parameters.setPrivateSalt(saltParts[2]);
+    parameters.setProjectSalt(saltParts[3]);
+    parameters.setProjectId(saltParts[4]);
+
+    return parameters;
   }
 }

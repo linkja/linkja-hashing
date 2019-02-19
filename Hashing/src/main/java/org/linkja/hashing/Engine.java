@@ -17,18 +17,20 @@ import java.util.*;
 public class Engine {
   public static final int MIN_NUM_FIELDS = 4;
 
-  // List the canonical names for required fields
+  // List the canonical names for anticipated fields
   public static final String PATIENT_ID_FIELD = "patient_id";
   public static final String FIRST_NAME_FIELD = "first_name";
   public static final String LAST_NAME_FIELD = "last_name";
   public static final String DATE_OF_BIRTH_FIELD = "date_of_birth";
   public static final String SOCIAL_SECURITY_NUMBER = "social_security_number";
+  public static final String EXCEPTION_FLAG = "exception_flag";
 
   private static final String REQUIRED_COLUMNS_EXCEPTION_MESSAGE = "We require, at a minimum, columns for patient ID, first name, last name, and date of birth.\r\n" +
           "If you have these columns present, please make sure that the column header is specified, and that the column names are in our list of " +
           "recognized values.  Please see the project README for more information.";
 
   private EngineParameters parameters;
+  private static HashParameters hashParameters;
   private DataHeaderMap patientDataHeaderMap;
   private static HashMap<String, String> canonicalHeaderNames = null;
   private static ArrayList<String> prefixes = null;
@@ -36,11 +38,19 @@ public class Engine {
   private static HashMap<String, String> genericNames = null;
 
 
-  public Engine(EngineParameters parameters) {
-    setParameters(parameters);
+  public Engine(EngineParameters parameters, HashParameters hashParameters) {
+    this.parameters = parameters;
+    this.hashParameters = hashParameters;
     this.patientDataHeaderMap = new DataHeaderMap();
   }
 
+  /**
+   * Performs initialization and setup for the Engine.  This assumes that it has been given all of the parameters.
+   * This should be called if any parameters change.
+   * @throws IOException
+   * @throws URISyntaxException
+   * @throws LinkjaException
+   */
   public void initialize() throws IOException, URISyntaxException, LinkjaException {
     ClassLoader classLoader = getClass().getClassLoader();
     if (this.canonicalHeaderNames == null) {
@@ -90,6 +100,12 @@ public class Engine {
     return row;
   }
 
+  /**
+   * Run the hashing pipeline, given the current configuration
+   * @throws IOException
+   * @throws URISyntaxException
+   * @throws LinkjaException
+   */
   public void run() throws IOException, URISyntaxException, LinkjaException {
     initialize();
 
@@ -103,7 +119,10 @@ public class Engine {
 
     ArrayList<IStep> steps = new ArrayList<IStep>();
     steps.add(new ValidationFilterStep());
-    steps.add(new NormalizationStep(this.prefixes, this.suffixes));
+    // The user can configure the system to skip normalization, if they prepfer to handle that externally
+    if (this.parameters.isRunNormalizationStep()) {
+      steps.add(new NormalizationStep(this.prefixes, this.suffixes));
+    }
     // If the user doesn't want exception flags, or has already created them, we are going to skip this step in
     // the processing pipeline.
     // TODO - If the user said they have already provided the exception flag, should we confirm that?
@@ -111,6 +130,7 @@ public class Engine {
       steps.add(new ExceptionStep(this.genericNames));
     }
     steps.add(new PermuteStep());
+    steps.add(new HashingStep(this.hashParameters));
 
     // Because our check for unique patient IDs requires knowing every ID that has been seen, and because our processing
     // steps do not hold state, we are performing this check as we load up our worker queue.
@@ -124,9 +144,9 @@ public class Engine {
 
       DataRow row = csvRecordToDataRow(csvRecord);
       RecordProcessor processor = new RecordProcessor(steps);
-      dumpRow(row);
+      dumpRow(row);  // TODO - Remove this
       row = processor.run(row);
-      dumpRow(row);
+      dumpRow(row);  // TODO - Remove this
     }
   }
 
@@ -195,15 +215,5 @@ public class Engine {
 
   public EngineParameters getParameters() {
     return parameters;
-  }
-
-  /**
-   * Internally accessible method to set the parameters for running the engine.  Note that once the engine is
-   * constructed, we don't want callers to be able to change execution parameters so this is private to the
-   * class.
-   * @param parameters The parameters needed to run this engine instance
-   */
-  private void setParameters(EngineParameters parameters) {
-    this.parameters = parameters;
   }
 }
