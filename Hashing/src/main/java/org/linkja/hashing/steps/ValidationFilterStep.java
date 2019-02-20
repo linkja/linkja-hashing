@@ -4,11 +4,25 @@ import org.apache.commons.lang.StringUtils;
 import org.linkja.hashing.DataRow;
 import org.linkja.hashing.Engine;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Optional;
 
 public class ValidationFilterStep implements IStep {
   public static final int MIN_NAME_LENGTH = 2;
   private static final String SSN_INVALID_CHARACTERS = ".*[^\\d\\- ].*";
+  private static final DateTimeFormatter dobFormatter = DateTimeFormatter.ofPattern(""
+          + "[yyyy/M/d[ H:mm[:ss]]]"
+          + "[yyyy-M-d[ H:mm[:ss]]]"
+          + "[yyyy M d[ H:mm[:ss]]]"
+          + "[yyyyMMdd[ H:mm[:ss]]]"
+          + "[M/d/yyyy[ H:mm[:ss]]]"
+          + "[M-d-yyyy[ H:mm[:ss]]]"
+          + "[M d yyyy[ H:mm[:ss]]]"
+          + "[MMddyyyy[ H:mm[:ss]]]"
+  );
 
   @Override
   public DataRow run(DataRow row) {
@@ -104,7 +118,10 @@ public class ValidationFilterStep implements IStep {
     boolean hasFormatError = false;
     StringBuilder formatBuilder = new StringBuilder();
     formatBuilder.append("The following fields are not in a valid format: ");
-
+    if (row.containsKey(Engine.DATE_OF_BIRTH_FIELD) && !isValidDate(row.get(Engine.DATE_OF_BIRTH_FIELD))) {
+      formatBuilder.append("Date of Birth (recommended to use MM/DD/YYYY format), ");
+      hasFormatError = true;
+    }
     if (row.containsKey(Engine.SOCIAL_SECURITY_NUMBER) && row.get(Engine.SOCIAL_SECURITY_NUMBER).trim().matches(SSN_INVALID_CHARACTERS)) {
       formatBuilder.append("Social Security Number (only allow numbers, dashes and spaces), ");
       hasFormatError = true;
@@ -115,6 +132,20 @@ public class ValidationFilterStep implements IStep {
     }
 
     return row;
+  }
+
+  public boolean isValidDate(String dateString) {
+    if (dateString == null) {
+      return false;
+    }
+
+    try {
+      LocalDate.parse(dateString, dobFormatter);
+      return true;
+    }
+    catch (DateTimeParseException exc) {
+      return false;
+    }
   }
 
   /**

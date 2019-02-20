@@ -183,33 +183,33 @@ class ValidationFilterStepTest {
 
     ValidationFilterStep step = new ValidationFilterStep();
     row = step.run(row);
-    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Social Security Number (only allow numbers, dashes and spaces)",
+    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format), Social Security Number (only allow numbers, dashes and spaces)",
             row.getInvalidReason());
 
     row.setInvalidReason(null);
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
     row = step.run(row);
-    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields are not in a valid format: Social Security Number (only allow numbers, dashes and spaces)",
+    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format), Social Security Number (only allow numbers, dashes and spaces)",
             row.getInvalidReason());
 
     row.setInvalidReason(null);
     row.put(Engine.PATIENT_ID_FIELD, "12345");
     row.put(Engine.FIRST_NAME_FIELD, "A");
     row.put(Engine.LAST_NAME_FIELD, "B");
-    row.put(Engine.DATE_OF_BIRTH_FIELD, "12/12/1912");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "12/12/asdf");
     row = step.run(row);
-    assertEquals("The following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Social Security Number (only allow numbers, dashes and spaces)",
+    assertEquals("The following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format), Social Security Number (only allow numbers, dashes and spaces)",
             row.getInvalidReason());
 
     row.setInvalidReason(null);
     row.put(Engine.PATIENT_ID_FIELD, "");
     row.put(Engine.FIRST_NAME_FIELD, "A");
     row.put(Engine.LAST_NAME_FIELD, "B");
-    row.put(Engine.DATE_OF_BIRTH_FIELD, "");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "12/12/1912");
     row.put(Engine.SOCIAL_SECURITY_NUMBER, "3333");
     row = step.run(row);
-    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields must be longer than 1 character: First Name, Last Name",
+    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier\r\nThe following fields must be longer than 1 character: First Name, Last Name",
             row.getInvalidReason());
   }
 
@@ -245,5 +245,50 @@ class ValidationFilterStepTest {
     row.put(Engine.SOCIAL_SECURITY_NUMBER, "333-33 3333");
     row = step.run(row);
     assertNull(row.getInvalidReason());
+  }
+
+  @Test
+  void isValidDate_NullEmpty() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidDate(null));
+    assertFalse(step.isValidDate(""));
+    assertFalse(step.isValidDate("   "));
+  }
+
+  @Test
+  void isValidDate_DateValid() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assert(step.isValidDate("11/05/2019"));  // MM/dd/yyyy
+    assert(step.isValidDate("3/2/2019"));    // M/d/yyyy
+    assert(step.isValidDate("3-2-2019"));    // M-d-yyyy
+    assert(step.isValidDate("2019-3-2"));    // yyyy-M-d
+    assert(step.isValidDate("2019/3/2"));    // yyyy/M/d
+    assert(step.isValidDate("2019 3 2"));    // yyyy M d
+    assert(step.isValidDate("20190302"));    // yyyyMMdd
+  }
+
+  @Test
+  void isValidDate_DateTimeValid() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assert(step.isValidDate("11/05/2019 3:30"));      // MM/dd/yyyy H:mm
+    assert(step.isValidDate("3/2/2019 15:30"));       // M/d/yyyy HH:mm
+    assert(step.isValidDate("3-2-2019 03:30"));       // M-d-yyyy HH:mm
+    assert(step.isValidDate("2019-3-2 07:15:32"));    // yyyy-M-d HH:mm:ss
+    assert(step.isValidDate("7/4/1930 0:00"));        //M/d/yyyy H:mm
+
+  }
+
+  @Test
+  void isValidDate_DateInvalid() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidDate("Nov 05 2019"));
+    assertFalse(step.isValidDate("05/2019"));
+  }
+
+  @Test
+  void isValidDate_DateTimeInvalid() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidDate("11/05/2019 25:15"));
+    assertFalse(step.isValidDate("05/05/2019 5:5:5"));
   }
 }
