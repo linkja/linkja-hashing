@@ -8,10 +8,17 @@ import java.util.Optional;
 
 public class ValidationFilterStep implements IStep {
   public static final int MIN_NAME_LENGTH = 2;
+  private static final String SSN_INVALID_CHARACTERS = ".*[^\\d\\- ].*";
 
   @Override
   public DataRow run(DataRow row) {
-    checkBlankFields(row);
+    if (row == null || !row.shouldProcess()) {
+      return row;
+    }
+
+    row = checkRequiredFields(row);
+    row = checkFieldLength(row);
+    row = checkFieldFormat(row);
     return row;
   }
 
@@ -21,13 +28,9 @@ public class ValidationFilterStep implements IStep {
    * @param row The DataRow to check
    * @return DataRow with the invalid reason set (if any problems were found)
    */
-  public DataRow checkBlankFields(DataRow row) {
+  public DataRow checkRequiredFields(DataRow row) {
     if (row == null) {
       return null;
-    }
-
-    if (!row.shouldProcess()) {
-      return row;
     }
 
     // We require that the 4 primary fields have non-empty values.  Note that instead of short-circuiting on the first
@@ -35,9 +38,6 @@ public class ValidationFilterStep implements IStep {
     boolean hasMissingError = false;
     StringBuilder missingBuilder = new StringBuilder();
     missingBuilder.append("The following fields are missing or just contain whitespace.  They must be filled in: ");
-    boolean hasLengthError = false;
-    StringBuilder lengthBuilder = new StringBuilder();
-    lengthBuilder.append("The following fields must be longer than 1 character: ");
     if (!row.containsKey(Engine.PATIENT_ID_FIELD) || row.get(Engine.PATIENT_ID_FIELD).trim().isEmpty()) {
       missingBuilder.append("Patient Identifier, ");
       hasMissingError = true;
@@ -46,17 +46,9 @@ public class ValidationFilterStep implements IStep {
       missingBuilder.append("First Name, ");
       hasMissingError = true;
     }
-    else if (row.get(Engine.FIRST_NAME_FIELD).trim().length() < MIN_NAME_LENGTH) {
-      lengthBuilder.append("First Name, ");
-      hasLengthError = true;
-    }
     if (!row.containsKey(Engine.LAST_NAME_FIELD) || row.get(Engine.LAST_NAME_FIELD).trim().isEmpty()) {
       missingBuilder.append("Last Name, ");
       hasMissingError = true;
-    }
-    else if (row.get(Engine.LAST_NAME_FIELD).trim().length() < MIN_NAME_LENGTH) {
-      lengthBuilder.append("Last Name, ");
-      hasLengthError = true;
     }
     if (!row.containsKey(Engine.DATE_OF_BIRTH_FIELD) || row.get(Engine.DATE_OF_BIRTH_FIELD).trim().isEmpty()) {
       missingBuilder.append("Date of Birth, ");
@@ -64,14 +56,76 @@ public class ValidationFilterStep implements IStep {
     }
 
     if (hasMissingError) {
-      row.setInvalidReason(StringUtils.strip(missingBuilder.toString(), ", ").trim());
-    }
-    if (hasLengthError) {
-      String reason = (Optional.ofNullable(row.getInvalidReason()).orElse("") + "\r\n" +
-              StringUtils.strip(lengthBuilder.toString(), ", ").trim()).trim();
-      row.setInvalidReason(reason);
+      row.setInvalidReason(safeAppendInvalidReason(row, missingBuilder.toString()));
     }
 
     return row;
+  }
+
+  /**
+   * Validate that data fields with length requirements meet those requirements
+   * @param row The DataRow to check
+   * @return DataRow with the invalid reason set (if any problems were found)
+   */
+  public DataRow checkFieldLength(DataRow row) {
+    if (row == null) {
+      return null;
+    }
+
+    boolean hasLengthError = false;
+    StringBuilder lengthBuilder = new StringBuilder();
+    lengthBuilder.append("The following fields must be longer than 1 character: ");
+    if (row.containsKey(Engine.FIRST_NAME_FIELD) && row.get(Engine.FIRST_NAME_FIELD).trim().length() < MIN_NAME_LENGTH) {
+      lengthBuilder.append("First Name, ");
+      hasLengthError = true;
+    }
+    if (row.containsKey(Engine.LAST_NAME_FIELD) && row.get(Engine.LAST_NAME_FIELD).trim().length() < MIN_NAME_LENGTH) {
+      lengthBuilder.append("Last Name, ");
+      hasLengthError = true;
+    }
+
+    if (hasLengthError) {
+      row.setInvalidReason(safeAppendInvalidReason(row, lengthBuilder.toString()));
+    }
+
+    return row;
+  }
+
+  /**
+   * Validate the format of fields which have formatting requirements (DOB, SSN)
+   * @param row The DataRow to check
+   * @return DataRow with the invalid reason set (if any problems were found)
+   */
+  public DataRow checkFieldFormat(DataRow row) {
+    if (row == null) {
+      return null;
+    }
+
+    boolean hasFormatError = false;
+    StringBuilder formatBuilder = new StringBuilder();
+    formatBuilder.append("The following fields are not in a valid format: ");
+
+    if (row.containsKey(Engine.SOCIAL_SECURITY_NUMBER) && row.get(Engine.SOCIAL_SECURITY_NUMBER).trim().matches(SSN_INVALID_CHARACTERS)) {
+      formatBuilder.append("Social Security Number (only allow numbers, dashes and spaces), ");
+      hasFormatError = true;
+    }
+
+    if (hasFormatError) {
+      row.setInvalidReason(safeAppendInvalidReason(row, formatBuilder.toString()));
+    }
+
+    return row;
+  }
+
+  /**
+   * Utility method to safely append a reason why a data row is invalid, accounting for nulls, trimming spaces, etc.
+   * @param row The DataRow to add the invalid reason to
+   * @param additionalReason The description why the row is invalid, which needs to be appended
+   * @return The updated invalid reason, with additionalReason appended
+   */
+  private String safeAppendInvalidReason(DataRow row, String additionalReason) {
+    String reason = (Optional.ofNullable(row.getInvalidReason()).orElse("") + "\r\n" +
+            StringUtils.strip(additionalReason, ", ").trim()).trim();
+    return reason;
   }
 }
