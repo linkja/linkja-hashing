@@ -12,6 +12,11 @@ class RecordProcessorTest {
 
   class FakeStep implements IStep {
     public DataRow run(DataRow row) { return row; }
+
+    @Override
+    public String getStepName() {
+      return this.getClass().getSimpleName();
+    }
   }
 
   @Test

@@ -59,6 +59,7 @@ public class Runner {
     HashParameters hashParameters = null;
     try {
       hashParameters = parseProjectSalt(parameters.getSaltFile(), parameters.getPrivateKeyFile());
+      hashParameters.setPrivateDate(parameters.getPrivateDate());  // Provide a copy to our hashing parameters collection
     }
     catch (Exception exc) {
       System.out.println("ERROR - We encountered an error when trying to decrypt the salt file using the private key");

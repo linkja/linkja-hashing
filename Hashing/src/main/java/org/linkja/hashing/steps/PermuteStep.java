@@ -18,6 +18,11 @@ public class PermuteStep implements IStep {
     return row;
   }
 
+  @Override
+  public String getStepName() {
+    return this.getClass().getSimpleName();
+  }
+
   /**
    * Given a last name, create permutations if there are multiple parts to the name.  This will retain the original
    * record as the main DataRow data, and create new derived DataRow objects.

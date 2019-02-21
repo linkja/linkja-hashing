@@ -19,6 +19,7 @@ public class DataRow extends HashMap<String, String> implements Cloneable {
   private String warning;
   private boolean isException;
   private ArrayList<DataRow> derivedRows;
+  private ArrayList<String> completedSteps;
 
   public long getRowNumber() { return rowNumber; }
 
@@ -54,6 +55,22 @@ public class DataRow extends HashMap<String, String> implements Cloneable {
 
   public void setDerivedRows(ArrayList<DataRow> derivedRows) {
     this.derivedRows = derivedRows;
+  }
+
+  public ArrayList<String> getCompletedSteps() {
+    return completedSteps;
+  }
+
+  public void setCompletedSteps(ArrayList<String> completedSteps) {
+    this.completedSteps = completedSteps;
+  }
+
+  public boolean hasCompletedStep(String step) {
+    if (this.completedSteps == null) {
+      return false;
+    }
+
+    return this.completedSteps.contains(step);
   }
 
   /**
@@ -108,6 +125,17 @@ public class DataRow extends HashMap<String, String> implements Cloneable {
       cloneRow.setDerivedRows(cloneDerivedRows);
     }
 
+    if (this.getCompletedSteps() == null) {
+      cloneRow.setCompletedSteps(null);
+    }
+    else {
+      ArrayList<String> cloneCompletedSteps = new ArrayList<String>();
+      for (String step : this.completedSteps) {
+        cloneCompletedSteps.add(step);
+      }
+      cloneRow.setCompletedSteps(cloneCompletedSteps);
+    }
+
     return cloneRow;
   }
 
@@ -134,7 +162,8 @@ public class DataRow extends HashMap<String, String> implements Cloneable {
             && Objects.equals(this.isException(), otherRow.isException())
             && Objects.equals(this.getInvalidReason(), otherRow.getInvalidReason())
             && Objects.equals(this.getWarning(), otherRow.getWarning())
-            && Objects.equals(this.getDerivedRows(), otherRow.getDerivedRows())) {
+            && Objects.equals(this.getDerivedRows(), otherRow.getDerivedRows())
+            && Objects.equals(this.getCompletedSteps(), otherRow.getCompletedSteps())) {
       return true;
     }
 
@@ -149,6 +178,7 @@ public class DataRow extends HashMap<String, String> implements Cloneable {
             .append(this.invalidReason)
             .append(this.warning)
             .append(this.derivedRows)
+            .append(this.completedSteps)
             .toHashCode();
   }
 }

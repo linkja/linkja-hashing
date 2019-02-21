@@ -6,7 +6,8 @@ import java.nio.file.Path;
 import java.security.InvalidParameterException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 /**
  * This represents a consolidated collection of parameters needed to run the engine.
@@ -23,12 +24,13 @@ public class EngineParameters {
   public static final int DEFAULT_WORKER_THREADS = 3;
   public static final boolean DEFAULT_RUN_NORMALIZATION_STEP = true;
 
-  private static final SimpleDateFormat PrivateDateFormatter = new SimpleDateFormat("MM/dd/yyyy");
+  public static final DateTimeFormatter PrivateDateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+  //private static final SimpleDateFormat PrivateDateFormatter = new SimpleDateFormat("MM/dd/yyyy");
 
   private File privateKeyFile;
   private File saltFile;
   private File patientFile;
-  private Date privateDate;
+  private LocalDate privateDate;
   private Path outputDirectory;
   private char delimiter = DEFAULT_DELIMITER;
   private RecordExceptionMode recordExceptionMode = DEFAULT_RECORD_EXCEPTION_MODE;
@@ -96,16 +98,16 @@ public class EngineParameters {
     setPatientFile(file);
   }
 
-  public Date getPrivateDate() {
+  public LocalDate getPrivateDate() {
     return privateDate;
   }
 
-  public void setPrivateDate(Date privateDate) {
+  public void setPrivateDate(LocalDate privateDate) {
     this.privateDate = privateDate;
   }
 
   public void setPrivateDate(String privateDate) throws ParseException {
-    Date parsedDate = PrivateDateFormatter.parse(privateDate);
+    LocalDate parsedDate = LocalDate.parse(privateDate, PrivateDateFormatter);
     setPrivateDate(parsedDate);
   }
 

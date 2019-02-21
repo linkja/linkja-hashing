@@ -182,12 +182,14 @@ class NormalizationStepTest {
       put(Engine.PATIENT_ID_FIELD, " MRS.   JANE ");  // Set like first name to confirm we don't modify it
       put(Engine.LAST_NAME_FIELD, " SMITH III  ");
       put(Engine.SOCIAL_SECURITY_NUMBER, "123-45-6789");
+      put(Engine.DATE_OF_BIRTH_FIELD, "6/13/1970");
     }};
     row = step.run(row);
     assertEquals("JANE", row.get(Engine.FIRST_NAME_FIELD));
     assertEquals(" MRS.   JANE ", row.get(Engine.PATIENT_ID_FIELD));
     assertEquals("SMITH", row.get(Engine.LAST_NAME_FIELD));
     assertEquals("6789", row.get(Engine.SOCIAL_SECURITY_NUMBER));
+    assertEquals("1970-06-13", row.get(Engine.DATE_OF_BIRTH_FIELD));
 
     // The following block is a set of regression tests we developed with the SQL implementation to ensure consistent
     // output from both versions.
@@ -248,5 +250,12 @@ class NormalizationStepTest {
     assertEquals("6789", step.normalizeSSN("123456789"));
     assertEquals("6789", step.normalizeSSN("123 45 6789"));
     assertEquals("6789", step.normalizeSSN(" 1 2 3 4 5 6 7 8 9 "));
+  }
+
+  @Test
+  void normalizeDate() {
+    NormalizationStep step = new NormalizationStep(null, null);
+    assertEquals("2019-01-01", step.normalizeDate("01/01/2019 13:30"));
+    assertEquals("2019-12-31", step.normalizeDate("2019-12-31"));
   }
 }

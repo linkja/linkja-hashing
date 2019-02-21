@@ -31,6 +31,7 @@ class DataRowTest {
     derivedRow.put("five", "six");
     derivedRows.add(derivedRow);
     row.setDerivedRows(derivedRows);
+    row.setCompletedSteps(new ArrayList<String>() {{ add("one"); add("two"); }});
 
     DataRow cloneRow = (DataRow)row.clone();
 
@@ -39,6 +40,7 @@ class DataRowTest {
     assertEquals(row.isException(), cloneRow.isException());
     assertEquals(row.getWarning(), cloneRow.getWarning());
     assertEquals(row.getDerivedRows(), cloneRow.getDerivedRows());
+    assertEquals(row.getCompletedSteps(), cloneRow.getCompletedSteps());
     assertEquals(row, cloneRow);
     assertEquals(row.hashCode(), cloneRow.hashCode());
 
@@ -49,12 +51,14 @@ class DataRowTest {
     row.setInvalidReason("");
     row.setWarning("");
     derivedRow.setInvalidReason("Derived row invalid reason");
+    row.setCompletedSteps(new ArrayList<String>() {{ add("three"); }});
 
     assertNotEquals(row.getRowNumber(), cloneRow.getRowNumber());
     assertNotEquals(row.getInvalidReason(), cloneRow.getInvalidReason());
     assertNotEquals(row.isException(), cloneRow.isException());
     assertNotEquals(row.getWarning(), cloneRow.getWarning());
     assertNotEquals(row.getDerivedRows(), cloneRow.getDerivedRows());
+    assertNotEquals(row.getCompletedSteps(), cloneRow.getCompletedSteps());
     assertNotEquals(row, cloneRow);
     assertNotEquals(row.hashCode(), cloneRow.hashCode());
   }
@@ -135,5 +139,19 @@ class DataRowTest {
     assert(row.hasDerivedRows());
     row.setDerivedRows(new ArrayList<DataRow>());
     assertFalse(row.hasDerivedRows());
+  }
+
+  @Test
+  void hasCompletedStep() {
+    DataRow row = new DataRow();
+    row.setCompletedSteps(new ArrayList<String>() {{ add("one"); add("two"); }});
+    assertFalse(row.hasCompletedStep(null));
+    assertFalse(row.hasCompletedStep(""));
+    // It must be an exact match - we do no cleaning on the input
+    assertFalse(row.hasCompletedStep("ONE"));
+    assertFalse(row.hasCompletedStep("two "));
+
+    assert(row.hasCompletedStep("one"));
+    assert(row.hasCompletedStep("two"));
   }
 }

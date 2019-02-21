@@ -36,6 +36,11 @@ public class ExceptionStep implements IStep {
     return row;
   }
 
+  @Override
+  public String getStepName() {
+    return this.getClass().getSimpleName();
+  }
+
   /**
    * Determine if a name (based on first / last) matches our loaded patterns and rules for being an exception.
    * @param firstName The first name to check

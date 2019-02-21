@@ -1,11 +1,14 @@
 package org.linkja.hashing;
 
+import java.time.LocalDate;
+
 public class HashParameters {
   private String siteId;
   private String siteName;
   private String privateSalt;
   private String projectSalt;
   private String projectId;
+  private LocalDate privateDate;
 
   public String getSiteId() {
     return siteId;
@@ -45,5 +48,13 @@ public class HashParameters {
 
   public void setProjectId(String projectId) {
     this.projectId = projectId;
+  }
+
+  public LocalDate getPrivateDate() {
+    return privateDate;
+  }
+
+  public void setPrivateDate(LocalDate privateDate) {
+    this.privateDate = privateDate;
   }
 }

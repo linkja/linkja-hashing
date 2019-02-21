@@ -4,11 +4,15 @@ import org.apache.commons.lang.StringUtils;
 import org.linkja.hashing.DataRow;
 import org.linkja.hashing.Engine;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Map;
 
 public class NormalizationStep implements IStep {
   public static final int MIN_SSN_LENGTH = 4;
+
+  public static final DateTimeFormatter NORMALIZED_DATE_OF_BIRTH_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
   // This is a specific SSN that is of appropriate length, but is considered an invalid placeholder and should be
   // removed
@@ -53,9 +57,17 @@ public class NormalizationStep implements IStep {
       else if (fieldName.equals(Engine.SOCIAL_SECURITY_NUMBER)) {
         row.put(fieldName, normalizeString(normalizeSSN(fieldValue)));
       }
+      else if (fieldName.equals(Engine.DATE_OF_BIRTH_FIELD)) {
+        row.put(fieldName, normalizeString(normalizeDate(fieldValue)));
+      }
       // TODO - Should we assume that every string passed in should be upper-cased and trimmed?
     }
     return row;
+  }
+
+  @Override
+  public String getStepName() {
+    return this.getClass().getSimpleName();
   }
 
   /**
@@ -176,5 +188,14 @@ public class NormalizationStep implements IStep {
     }
 
     return "";
+  }
+
+  /**
+   * Normalize a date string into a canonical format.
+   * @param date
+   * @return
+   */
+  public String normalizeDate(String date) {
+    return LocalDate.parse(date, ValidationFilterStep.DATE_OF_BIRTH_FORMATTER).format(NORMALIZED_DATE_OF_BIRTH_FORMAT);
   }
 }

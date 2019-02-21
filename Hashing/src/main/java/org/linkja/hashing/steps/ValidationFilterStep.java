@@ -13,7 +13,7 @@ import java.util.Optional;
 public class ValidationFilterStep implements IStep {
   public static final int MIN_NAME_LENGTH = 2;
   private static final String SSN_INVALID_CHARACTERS = ".*[^\\d\\- ].*";
-  private static final DateTimeFormatter dobFormatter = DateTimeFormatter.ofPattern(""
+  public static final DateTimeFormatter DATE_OF_BIRTH_FORMATTER = DateTimeFormatter.ofPattern(""
           + "[yyyy/M/d[ H:mm[:ss]]]"
           + "[yyyy-M-d[ H:mm[:ss]]]"
           + "[yyyy M d[ H:mm[:ss]]]"
@@ -34,6 +34,11 @@ public class ValidationFilterStep implements IStep {
     row = checkFieldLength(row);
     row = checkFieldFormat(row);
     return row;
+  }
+
+  @Override
+  public String getStepName() {
+    return this.getClass().getSimpleName();
   }
 
   /**
@@ -140,7 +145,7 @@ public class ValidationFilterStep implements IStep {
     }
 
     try {
-      LocalDate.parse(dateString, dobFormatter);
+      LocalDate.parse(dateString, DATE_OF_BIRTH_FORMATTER);
       return true;
     }
     catch (DateTimeParseException exc) {

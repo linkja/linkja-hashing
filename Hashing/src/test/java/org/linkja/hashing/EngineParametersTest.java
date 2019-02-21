@@ -10,6 +10,8 @@ import java.nio.file.Paths;
 import java.security.InvalidParameterException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -104,7 +106,7 @@ class EngineParametersTest {
   void setPrivateDate_Valid() throws ParseException {
     EngineParameters parameters = new EngineParameters();
     String dateString = "01/15/2012";
-    Date date = new SimpleDateFormat("MM/dd/yyyy").parse(dateString);
+    LocalDate date = LocalDate.parse(dateString, EngineParameters.PrivateDateFormatter);
     parameters.setPrivateDate(dateString);
     assertEquals(parameters.getPrivateDate(), date);
     parameters.setPrivateDate(date);
@@ -114,7 +116,7 @@ class EngineParametersTest {
   @Test
   void setPrivateDate_Invalid() {
     EngineParameters parameters = new EngineParameters();
-    assertThrows(ParseException.class, () -> parameters.setPrivateDate("May 5, 2019"));
+    assertThrows(DateTimeParseException.class, () -> parameters.setPrivateDate("May 5, 2019"));
   }
 
   @Test
