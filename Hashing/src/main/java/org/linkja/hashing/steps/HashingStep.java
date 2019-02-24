@@ -19,6 +19,10 @@ public class HashingStep implements IStep {
   public static final String LNAMEFNAMEDOB_FIELD = "lnamefnamedob";
   public static final String FNAMELNAMETDOBSSN_FIELD = "fnamelnameTdobssn";
   public static final String FNAMELNAMETDOB_FIELD = "fnamelnameTdob";
+  public static final String FNAME3LNAMEDOBSSN_FIELD = "fname3lnamedobssn";
+  public static final String FNAME3LNAMEDOB_FIELD = "fname3lnamedob";
+  public static final String FNAMELNAMEDOBDSSN_FIELD = "fnamelnamedobDssn";
+  public static final String FNAMELNAMEDOBYSSN_FIELD = "fnamelnamedobYssn";
 
   private static final DateTimeFormatter TRANSPOSE_DAY_MONTH_FORMAT = DateTimeFormatter.ofPattern("yyyy-dd-MM");
 
@@ -80,9 +84,9 @@ public class HashingStep implements IStep {
   }
 
   /**
-   *
-   * @param row
-   * @return
+   * Create a unique identifier hash using the patient's internal ID
+   * @param row Data row to process
+   * @return Modified data row with the PIDHASH_FIELD containing the hash
    */
   public DataRow patientIDHash(DataRow row) {
     long days = DAYS.between(this.convertedDateOfBirth, this.parameters.getPrivateDate());
@@ -92,6 +96,11 @@ public class HashingStep implements IStep {
     return row;
   }
 
+  /**
+   * Create a hash of the first name, last name, and DOB
+   * @param row Data row to process
+   * @return Modified data row with the FNAMELNAMEDOB_FIELD containing the hash
+   */
   public DataRow fnamelnamedobHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s",
             row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.LAST_NAME_FIELD), row.get(Engine.DATE_OF_BIRTH_FIELD),
@@ -100,6 +109,11 @@ public class HashingStep implements IStep {
     return row;
   }
 
+  /**
+   * Create a hash of the first name, last name, DOB, and SSN
+   * @param row Data row to process
+   * @return Modified data row with the FNAMELNAMEDOBSSN_FIELD containing the hash
+   */
   public DataRow fnamelnamedobssnHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s%s",
             row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.LAST_NAME_FIELD), row.get(Engine.DATE_OF_BIRTH_FIELD),
@@ -108,6 +122,11 @@ public class HashingStep implements IStep {
     return row;
   }
 
+  /**
+   * Create a hash of the last name, first name, DOB, and SSN
+   * @param row Data row to process
+   * @return Modified data row with the LNAMEFNAMEDOBSSN_FIELD containing the hash
+   */
   public DataRow lnamefnamedobssnHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s%s",
             row.get(Engine.LAST_NAME_FIELD), row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.DATE_OF_BIRTH_FIELD),
@@ -116,6 +135,11 @@ public class HashingStep implements IStep {
     return row;
   }
 
+  /**
+   * Create a hash of the last name, first name, and DOB
+   * @param row Data row to process
+   * @return Modified data row with the LNAMEFNAMEDOB_FIELD containing the hash
+   */
   public DataRow lnamefnamedobHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s",
             row.get(Engine.LAST_NAME_FIELD), row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.DATE_OF_BIRTH_FIELD),
@@ -124,6 +148,11 @@ public class HashingStep implements IStep {
     return row;
   }
 
+  /**
+   * Create a hash of the first name, last name, transposed DOB (YYYY-DD-MM), and SSN
+   * @param row Data row to process
+   * @return Modified data row with the FNAMELNAMETDOBSSN_FIELD containing the hash
+   */
   public DataRow fnamelnameTdobssnHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s%s",
             row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.LAST_NAME_FIELD), this.convertedDateOfBirth.format(TRANSPOSE_DAY_MONTH_FORMAT),
@@ -132,11 +161,90 @@ public class HashingStep implements IStep {
     return row;
   }
 
+  /**
+   * Create a hash of the first name, last name, and transposed DOB (YYYY-DD-MM)
+   * @param row Data row to process
+   * @return Modified data row with the FNAMELNAMETDOB_FIELD containing the hash
+   */
   public DataRow fnamelnameTdobHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s",
             row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.LAST_NAME_FIELD), this.convertedDateOfBirth.format(TRANSPOSE_DAY_MONTH_FORMAT),
             this.parameters.getPrivateSalt());
     row.put(FNAMELNAMETDOB_FIELD, getHashString(hashInput));
     return row;
+  }
+
+  /**
+   * Create a hash of the first 3 characters of the first name, last name, DOB, and SSN
+   * @param row Data row to process
+   * @return Modified data row with the FNAME3LNAMEDOBSSN_FIELD containing the hash
+   */
+  public DataRow fname3lnamedobssnHash(DataRow row) {
+    String hashInput = String.format("%s%s%s%s%s",
+            safeSubstring(row.get(Engine.FIRST_NAME_FIELD), 0, 3), row.get(Engine.LAST_NAME_FIELD), row.get(Engine.DATE_OF_BIRTH_FIELD),
+            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getPrivateSalt());
+    row.put(FNAME3LNAMEDOBSSN_FIELD, getHashString(hashInput));
+    return row;
+  }
+
+  /**
+   * Create a hash of the first 3 characters of the first name, last name, and DOB
+   * @param row Data row to process
+   * @return Modified data row with the FNAME3LNAMEDOB_FIELD containing the hash
+   */
+  public DataRow fname3lnamedobHash(DataRow row) {
+    String hashInput = String.format("%s%s%s%s",
+            safeSubstring(row.get(Engine.FIRST_NAME_FIELD), 0, 3), row.get(Engine.LAST_NAME_FIELD), row.get(Engine.DATE_OF_BIRTH_FIELD),
+            this.parameters.getPrivateSalt());
+    row.put(FNAME3LNAMEDOB_FIELD, getHashString(hashInput));
+    return row;
+  }
+
+  /**
+   * Create a hash of the first name, last name, DOB + 1 day, and SSN
+   * @param row Data row to process
+   * @return Modified data row with the FNAMELNAMEDOBDSSN_FIELD containing the hash
+   */
+  public DataRow fnamelnamedobDssnHash(DataRow row) {
+    String hashInput = String.format("%s%s%s%s%s",
+            row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.LAST_NAME_FIELD), this.convertedDateOfBirth.plusDays(1).format(NormalizationStep.NORMALIZED_DATE_OF_BIRTH_FORMAT),
+            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getPrivateSalt());
+    row.put(FNAMELNAMEDOBDSSN_FIELD, getHashString(hashInput));
+    return row;
+  }
+
+  /**
+   * Create a hash of the first name, last name, DOB + 1 year, and SSN
+   * @param row Data row to process
+   * @return Modified data row with the FNAMELNAMEDOBYSSN_FIELD containing the hash
+   */
+  public DataRow fnamelnamedobYssnHash(DataRow row) {
+    String hashInput = String.format("%s%s%s%s%s",
+            row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.LAST_NAME_FIELD), this.convertedDateOfBirth.plusYears(1).format(NormalizationStep.NORMALIZED_DATE_OF_BIRTH_FORMAT),
+            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getPrivateSalt());
+    row.put(FNAMELNAMEDOBYSSN_FIELD, getHashString(hashInput));
+    return row;
+  }
+
+  /**
+   * Utility method to get a substring, starting at a 0-based index, and collecting no more than length characters.
+   * This is a "safe" variant, because it will handle the checks if the length parameter exceeds the length of the
+   * string.  If invalid parameters (e.g., negative numbers) are passed in, this will still throw an exception.
+   * @param string String to process
+   * @param start The 0-based index to start at
+   * @param length The number of characters to extract, including the start position
+   * @return Substring requested
+   */
+  public static String safeSubstring(String string, int start, int length) {
+    if (string == null || string.length() == 0) {
+      return string;
+    }
+
+    if ((start + length) >= string.length()) {
+      return string.substring(start);
+    }
+    else {
+      return string.substring(start, (start + length));
+    }
   }
 }

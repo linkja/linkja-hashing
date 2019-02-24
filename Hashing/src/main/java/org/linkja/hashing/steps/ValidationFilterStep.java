@@ -139,6 +139,11 @@ public class ValidationFilterStep implements IStep {
     return row;
   }
 
+  /**
+   * Determine if a string, which should represent a date, is in one of our allowed input date formats.
+   * @param dateString The string to parse
+   * @return true if the string appears to be a date, false otherwise.
+   */
   public boolean isValidDate(String dateString) {
     if (dateString == null) {
       return false;
