@@ -161,38 +161,39 @@ public class Engine {
     HashSet<String> uniquePatientIds = new HashSet<>();
     int patientIdIndex = this.patientDataHeaderMap.findIndexOfCanonicalName(PATIENT_ID_FIELD);
 
-    ExecutorService executorService = Executors.newFixedThreadPool(parameters.getNumWorkerThreads());
+    ExecutorService threadPool = Executors.newFixedThreadPool(parameters.getNumWorkerThreads());
+    ExecutorCompletionService<DataRow> taskQueue = new ExecutorCompletionService<DataRow>(threadPool);
 
     // Because our check for unique patient IDs requires knowing every ID that has been seen, and because our processing
     // steps do not hold state, we are performing this check as we load up our worker queue.
-    List<Future<DataRow>> results = new ArrayList<Future<DataRow>>();
+    int numSubmittedJobs = 0;
     for (CSVRecord csvRecord : parser) {
       String patientId = csvRecord.get(patientIdIndex);
       if (uniquePatientIds.contains(patientId)) {
+        threadPool.shutdownNow();
         throw new LinkjaException(String.format("Patient IDs must be unique within the data file.  A duplicate copy of Patient ID %s was found on row %ld.",
                 patientId, csvRecord.getRecordNumber()));
       }
       uniquePatientIds.add(patientId);
 
       DataRow row = csvRecordToDataRow(csvRecord);
-      Future<DataRow> result = executorService.submit(new CalculationThread(row, this.parameters.isRunNormalizationStep(),
+      Future<DataRow> result = taskQueue.submit(new CalculationThread(row, this.parameters.isRunNormalizationStep(),
               this.parameters.getRecordExceptionMode(), this.prefixes, this.suffixes, this.genericNames,
               this.hashParameters));
-      results.add(result);
+      numSubmittedJobs++;
     }
 
-
-    for (Future<DataRow> result : results) {
-      try {
-        result.get();
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      } catch (ExecutionException e) {
-        e.printStackTrace();
+    //Output the long values of all my tasks in order of completion.
+    try {
+      for(int index = 0; index < numSubmittedJobs; index++) {
+        Future<DataRow> task = taskQueue.take();
       }
     }
+    catch (InterruptedException exc) {
+      exc.printStackTrace();
+    }
 
-    executorService.shutdown();
+    threadPool.shutdown();
   }
 
   /**
