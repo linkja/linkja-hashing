@@ -25,6 +25,8 @@ class NormalizationStepTest {
     add(" JR");
     add(" JR.");
     add("-JR.");
+    add(" V");
+    add(" I");
   }};
 
   @Test
@@ -155,6 +157,11 @@ class NormalizationStepTest {
     assertEquals("SMITH", step.removeSuffixes("SMITH JR"));
     assertEquals("SMITH", step.removeSuffixes("SMITH JR."));
     assertEquals("SMITH", step.removeSuffixes("SMITH-JR."));
+
+    // Also account for single-letter suffix replacement
+    assertEquals("I", step.removeSuffixes("I V"));
+    assertEquals("R", step.removeSuffixes("R V"));
+    assertEquals("C", step.removeSuffixes("C I"));
   }
 
   @Test
