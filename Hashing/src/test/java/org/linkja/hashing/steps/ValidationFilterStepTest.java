@@ -248,6 +248,33 @@ class ValidationFilterStepTest {
   }
 
   @Test
+  void run_TracksCompletedStep() {
+    DataRow row = new DataRow();
+    row.put(Engine.PATIENT_ID_FIELD, "1");
+    row.put(Engine.FIRST_NAME_FIELD, "Patient");
+    row.put(Engine.LAST_NAME_FIELD, "Test");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "05/15/2000");
+
+    ValidationFilterStep step = new ValidationFilterStep();
+    row = step.run(row);
+    assert(row.hasCompletedStep(step.getStepName()));
+  }
+
+  @Test
+  void run_DoesNotTrackCompletedStepWhenInvalid() {
+    DataRow row = new DataRow();
+    row.put(Engine.PATIENT_ID_FIELD, "1");
+    row.put(Engine.FIRST_NAME_FIELD, "Patient");
+    row.put(Engine.LAST_NAME_FIELD, "Test");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "05/15/2000");
+    row.setInvalidReason("Invalid for testing purposes");
+
+    ValidationFilterStep step = new ValidationFilterStep();
+    row = step.run(row);
+    assertFalse(row.hasCompletedStep(step.getStepName()));
+  }
+
+  @Test
   void isValidDate_NullEmpty() {
     ValidationFilterStep step = new ValidationFilterStep();
     assertFalse(step.isValidDate(null));

@@ -23,6 +23,7 @@ public class EngineParameters {
   public static final RecordExceptionMode DEFAULT_RECORD_EXCEPTION_MODE = RecordExceptionMode.NoExceptions;
   public static final int DEFAULT_WORKER_THREADS = 3;
   public static final boolean DEFAULT_RUN_NORMALIZATION_STEP = true;
+  public static final boolean DEFAULT_WRITE_UNHASHED_DATA = false;
 
   public static final DateTimeFormatter PrivateDateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
   //private static final SimpleDateFormat PrivateDateFormatter = new SimpleDateFormat("MM/dd/yyyy");
@@ -37,6 +38,7 @@ public class EngineParameters {
   private int numWorkerThreads = DEFAULT_WORKER_THREADS;
   private boolean runNormalizationStep = DEFAULT_RUN_NORMALIZATION_STEP;
   private FileHelper fileHelper;
+  private boolean writeUnhashedData = DEFAULT_WRITE_UNHASHED_DATA;
 
   public EngineParameters() {
     fileHelper = new FileHelper();
@@ -176,6 +178,19 @@ public class EngineParameters {
 
   public void setRunNormalizationStep(String runNormalization) {
     this.runNormalizationStep = (runNormalization == null) ?
-            EngineParameters.DEFAULT_RUN_NORMALIZATION_STEP: Boolean.parseBoolean(runNormalization.trim());
+            EngineParameters.DEFAULT_RUN_NORMALIZATION_STEP : Boolean.parseBoolean(runNormalization.trim());
+  }
+
+  public boolean isWriteUnhashedData() {
+    return writeUnhashedData;
+  }
+
+  public void setWriteUnhashedData(boolean writeUnhashedData) {
+    this.writeUnhashedData = writeUnhashedData;
+  }
+
+  public void setWriteUnhashedData(String writeUnhashedData) {
+    this.writeUnhashedData = (writeUnhashedData == null) ?
+            EngineParameters.DEFAULT_WRITE_UNHASHED_DATA : Boolean.parseBoolean(writeUnhashedData.trim());
   }
 }

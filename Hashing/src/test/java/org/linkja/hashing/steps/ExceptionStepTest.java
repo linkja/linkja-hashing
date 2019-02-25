@@ -126,4 +126,31 @@ class ExceptionStepTest {
     row = step.run(row);
     assertFalse(row.isException());
   }
+
+  @Test
+  void run_TracksCompletedStep() {
+    DataRow row = new DataRow() {{
+      put(Engine.FIRST_NAME_FIELD, "BABY ");
+      put(Engine.PATIENT_ID_FIELD, "123456");
+      put(Engine.LAST_NAME_FIELD, "SMITH");
+    }};
+
+    ExceptionStep step = new ExceptionStep(genericNames);
+    row = step.run(row);
+    assert(row.hasCompletedStep(step.getStepName()));
+  }
+
+  @Test
+  void run_DoesNotTrackCompletedStepWhenInvalid() {
+    DataRow row = new DataRow() {{
+      put(Engine.FIRST_NAME_FIELD, "BABY ");
+      put(Engine.PATIENT_ID_FIELD, "123456");
+      put(Engine.LAST_NAME_FIELD, "SMITH");
+    }};
+
+    row.setInvalidReason("Invalid for testing purposes");
+    ExceptionStep step = new ExceptionStep(genericNames);
+    row = step.run(row);
+    assertFalse(row.hasCompletedStep(step.getStepName()));
+  }
 }

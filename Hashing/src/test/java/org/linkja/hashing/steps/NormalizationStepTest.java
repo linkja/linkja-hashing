@@ -258,4 +258,31 @@ class NormalizationStepTest {
     assertEquals("2019-01-01", step.normalizeDate("01/01/2019 13:30"));
     assertEquals("2019-12-31", step.normalizeDate("2019-12-31"));
   }
+
+  @Test
+  void run_TracksCompletedStep() {
+    DataRow row = new DataRow() {{
+      put(Engine.FIRST_NAME_FIELD, "BABY ");
+      put(Engine.PATIENT_ID_FIELD, "123456");
+      put(Engine.LAST_NAME_FIELD, "SMITH");
+    }};
+
+    NormalizationStep step = new NormalizationStep(prefixes, suffixes);
+    row = step.run(row);
+    assert(row.hasCompletedStep(step.getStepName()));
+  }
+
+  @Test
+  void run_DoesNotTrackCompletedStepWhenInvalid() {
+    DataRow row = new DataRow() {{
+      put(Engine.FIRST_NAME_FIELD, "BABY ");
+      put(Engine.PATIENT_ID_FIELD, "123456");
+      put(Engine.LAST_NAME_FIELD, "SMITH");
+    }};
+
+    row.setInvalidReason("Invalid for testing purposes");
+    NormalizationStep step = new NormalizationStep(prefixes, suffixes);
+    row = step.run(row);
+    assertFalse(row.hasCompletedStep(step.getStepName()));
+  }
 }

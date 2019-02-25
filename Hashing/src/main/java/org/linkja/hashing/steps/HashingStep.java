@@ -36,9 +36,10 @@ public class HashingStep implements IStep {
 
   @Override
   public DataRow run(DataRow row) {
-    if (row == null) {
-      return null;
+    if (row == null || !row.shouldProcess()) {
+      return row;
     }
+    row.addCompletedStep(this.getStepName());
 
     if (!row.hasCompletedStep(ValidationFilterStep.class.getSimpleName())) {
       row.setInvalidReason("The processing pipeline requires the Validation Filter to be run before Hashing.");

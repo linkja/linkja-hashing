@@ -20,6 +20,31 @@ class HashingStepTest {
   }
 
   @Test
+  void run_TracksCompletedStep() {
+    DataRow row = new DataRow();
+    row.put(Engine.PATIENT_ID_FIELD, "12345");
+    row.put(Engine.FIRST_NAME_FIELD, "JON");
+    row.put(Engine.LAST_NAME_FIELD, "DOE");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
+    HashParameters parameters = new HashParameters();
+    parameters.setPrivateSalt("0123456789123");
+
+    HashingStep step = new HashingStep(parameters);
+    row = step.run(row);
+    assert(row.hasCompletedStep(step.getStepName()));
+  }
+
+  @Test
+  void run_DoesNotTrackCompletedStepWhenInvalid() {
+    DataRow row = new DataRow();
+    row.setInvalidReason("Invalid for testing purposes");
+    row.addCompletedStep(new ValidationFilterStep().getStepName());
+    HashingStep step = new HashingStep(null);
+    row = step.run(row);
+    assertFalse(row.hasCompletedStep(step.getStepName()));
+  }
+
+  @Test
   // SQL Equivalent:
   // SELECT dbo.fnHashBytes2(CONCAT('12345','3',datediff(dd,'1950-01-01','2000-01-01')),'0123456789123')  -- PIDHASH
   void patientIDHash() {

@@ -9,9 +9,10 @@ public class PermuteStep implements IStep {
 
   @Override
   public DataRow run(DataRow row) {
-    if (row == null) {
-      return null;
+    if (row == null || !row.shouldProcess()) {
+      return row;
     }
+    row.addCompletedStep(this.getStepName());
 
     row = permuteLastName(row);
 

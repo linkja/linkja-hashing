@@ -69,4 +69,31 @@ class PermuteStepTest {
       assertEquals("DOE", derivedRows.get(1).get(Engine.LAST_NAME_FIELD));
     }
   }
+
+  @Test
+  void run_TracksCompletedStep() {
+    DataRow row = new DataRow() {{
+      put(Engine.FIRST_NAME_FIELD, "BABY ");
+      put(Engine.PATIENT_ID_FIELD, "123456");
+      put(Engine.LAST_NAME_FIELD, "SMITH");
+    }};
+
+    PermuteStep step = new PermuteStep();
+    row = step.run(row);
+    assert(row.hasCompletedStep(step.getStepName()));
+  }
+
+  @Test
+  void run_DoesNotTrackCompletedStepWhenInvalid() {
+    DataRow row = new DataRow() {{
+      put(Engine.FIRST_NAME_FIELD, "BABY ");
+      put(Engine.PATIENT_ID_FIELD, "123456");
+      put(Engine.LAST_NAME_FIELD, "SMITH");
+    }};
+
+    row.setInvalidReason("Invalid for testing purposes");
+    PermuteStep step = new PermuteStep();
+    row = step.run(row);
+    assertFalse(row.hasCompletedStep(step.getStepName()));
+  }
 }

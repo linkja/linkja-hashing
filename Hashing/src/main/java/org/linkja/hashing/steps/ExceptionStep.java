@@ -26,9 +26,10 @@ public class ExceptionStep implements IStep {
 
   @Override
   public DataRow run(DataRow row) {
-    if (row == null) {
-      return null;
+    if (row == null || !row.shouldProcess()) {
+      return row;
     }
+    row.addCompletedStep(this.getStepName());
 
     // TODO - Determine how dynamic we should be.
     // For now, we assume just first name and last name should be processed by these rules

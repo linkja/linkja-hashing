@@ -187,13 +187,28 @@ public class Engine {
     try {
       for(int index = 0; index < numSubmittedJobs; index++) {
         Future<DataRow> task = taskQueue.take();
+        writeDataRowResult(task.get());
       }
     }
-    catch (InterruptedException exc) {
+    catch (Exception exc) {
       exc.printStackTrace();
     }
 
     threadPool.shutdown();
+  }
+
+  private void writeDataRowResult(DataRow row) {
+    if (row == null) {
+      return;
+    }
+
+    if (row.getInvalidReason() == null || row.getInvalidReason().equals("")) {
+
+    }
+    else {
+      System.out.println("INVALID ROW: ");
+      dumpRow(row);
+    }
   }
 
   /**
@@ -215,6 +230,9 @@ public class Engine {
     String indentString = new String(new char[indentLevel*2]).replace("\0", " ");
     for (Map.Entry<String,String> entry : row.entrySet()) {
       System.out.printf("%s%s - %s\r\n", indentString, entry.getKey(), entry.getValue());
+    }
+    if (row.getInvalidReason() != null && !row.getInvalidReason().equals("")) {
+      System.out.printf("%sINVALID REASON: - %s\r\n", indentString, row.getInvalidReason());
     }
     if (row.hasDerivedRows()) {
       System.out.printf("%sDERIVED ROWS:\r\n", indentString);

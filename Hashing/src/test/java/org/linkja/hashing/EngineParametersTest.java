@@ -214,4 +214,32 @@ class EngineParametersTest {
     parameters.setRunNormalizationStep("blah");
     assertFalse(parameters.isRunNormalizationStep());
   }
+
+  @Test
+  void setWriteUnhashedData_Default() {
+    EngineParameters parameters = new EngineParameters();
+    assertEquals(EngineParameters.DEFAULT_WRITE_UNHASHED_DATA, parameters.isWriteUnhashedData());
+  }
+
+  @Test
+  void setWriteUnhashedData_Null() {
+    EngineParameters parameters = new EngineParameters();
+    parameters.setRunNormalizationStep(null);
+    assertEquals(EngineParameters.DEFAULT_WRITE_UNHASHED_DATA, parameters.isWriteUnhashedData());
+  }
+
+  @Test
+  void setWriteUnhashedData_Conversion() {
+    EngineParameters parameters = new EngineParameters();
+    parameters.setWriteUnhashedData("true");
+    assert(parameters.isWriteUnhashedData());
+    parameters.setWriteUnhashedData("True");
+    assert(parameters.isWriteUnhashedData());
+    parameters.setWriteUnhashedData("false");
+    assertFalse(parameters.isWriteUnhashedData());
+
+    // This is the way boolean conversions work in Java - if it's not "true", it's false
+    parameters.setWriteUnhashedData("blah");
+    assertFalse(parameters.isWriteUnhashedData());
+  }
 }

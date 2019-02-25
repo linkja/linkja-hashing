@@ -65,6 +65,13 @@ public class DataRow extends HashMap<String, String> implements Cloneable {
     this.completedSteps = completedSteps;
   }
 
+  public void addCompletedStep(String step) {
+    if (this.completedSteps == null) {
+      this.completedSteps = new ArrayList<String>();
+    }
+    this.completedSteps.add(step);
+  }
+
   public boolean hasCompletedStep(String step) {
     if (this.completedSteps == null) {
       return false;

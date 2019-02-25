@@ -29,6 +29,7 @@ public class ValidationFilterStep implements IStep {
     if (row == null || !row.shouldProcess()) {
       return row;
     }
+    row.addCompletedStep(this.getStepName());
 
     row = checkRequiredFields(row);
     row = checkFieldLength(row);
