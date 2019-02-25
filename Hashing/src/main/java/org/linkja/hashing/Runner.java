@@ -32,6 +32,8 @@ public class Runner {
       System.exit(1);
     }
 
+    long startTime = System.nanoTime();
+
     // Our parameters come from the command line and from a local config.properties file.  We split these up under the
     // assumption that those most likely to change across run should be passed in the command line, and those most
     // likely to remain consistent across runs should be in a config.properties file.
@@ -76,6 +78,11 @@ public class Runner {
       System.out.println(exc.getMessage());
       System.exit(1);
     }
+
+    long endTime = System.nanoTime();
+
+    double elapsedSeconds = (double)(endTime - startTime) / 1_000_000_000.0;
+    System.out.printf("Total execution time: %2f sec", elapsedSeconds);
   }
 
   /**

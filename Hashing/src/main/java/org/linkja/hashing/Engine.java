@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.*;
 
 public class Engine {
   public static final int MIN_NUM_FIELDS = 4;
@@ -100,6 +101,49 @@ public class Engine {
     return row;
   }
 
+  private static class CalculationThread implements Callable<DataRow> {
+    private DataRow dataRow;
+    private boolean runNormalizationStep;
+    private EngineParameters.RecordExceptionMode exceptionMode;
+    private static ArrayList<String> prefixes = null;
+    private static ArrayList<String> suffixes = null;
+    private static HashMap<String, String> genericNames = null;
+    private static HashParameters hashParameters;
+
+    public CalculationThread(DataRow dataRow, boolean runNormalizationStep,EngineParameters.RecordExceptionMode exceptionMode,
+                             ArrayList<String> prefixes, ArrayList<String> suffixes, HashMap<String, String> genericNames,
+                             HashParameters hashParameters) {
+      this.dataRow = dataRow;
+      this.runNormalizationStep = runNormalizationStep;
+      this.exceptionMode = exceptionMode;
+      this.prefixes = prefixes;
+      this.suffixes = suffixes;
+      this.genericNames = genericNames;
+      this.hashParameters = hashParameters;
+    }
+
+    @Override
+    public DataRow call() throws Exception {
+      ArrayList<IStep> steps = new ArrayList<IStep>();
+      steps.add(new ValidationFilterStep());
+      // The user can configure the system to skip normalization, if they prefer to handle that externally
+      if (runNormalizationStep) {
+        steps.add(new NormalizationStep(this.prefixes, this.suffixes));
+      }
+      // If the user doesn't want exception flags, or has already created them, we are going to skip this step in
+      // the processing pipeline.
+      // TODO - If the user said they have already provided the exception flag, should we confirm that?
+      if (exceptionMode == EngineParameters.RecordExceptionMode.GenerateExceptions) {
+        steps.add(new ExceptionStep(this.genericNames));
+      }
+      steps.add(new PermuteStep());
+      steps.add(new HashingStep(this.hashParameters));
+
+      RecordProcessor processor = new RecordProcessor(steps);
+      return processor.run(this.dataRow);
+    }
+  }
+
   /**
    * Run the hashing pipeline, given the current configuration
    * @throws IOException
@@ -117,23 +161,11 @@ public class Engine {
     HashSet<String> uniquePatientIds = new HashSet<>();
     int patientIdIndex = this.patientDataHeaderMap.findIndexOfCanonicalName(PATIENT_ID_FIELD);
 
-    ArrayList<IStep> steps = new ArrayList<IStep>();
-    steps.add(new ValidationFilterStep());
-    // The user can configure the system to skip normalization, if they prepfer to handle that externally
-    if (this.parameters.isRunNormalizationStep()) {
-      steps.add(new NormalizationStep(this.prefixes, this.suffixes));
-    }
-    // If the user doesn't want exception flags, or has already created them, we are going to skip this step in
-    // the processing pipeline.
-    // TODO - If the user said they have already provided the exception flag, should we confirm that?
-    if (this.parameters.getRecordExceptionMode() == EngineParameters.RecordExceptionMode.GenerateExceptions) {
-      steps.add(new ExceptionStep(this.genericNames));
-    }
-    steps.add(new PermuteStep());
-    steps.add(new HashingStep(this.hashParameters));
+    ExecutorService executorService = Executors.newFixedThreadPool(parameters.getNumWorkerThreads());
 
     // Because our check for unique patient IDs requires knowing every ID that has been seen, and because our processing
     // steps do not hold state, we are performing this check as we load up our worker queue.
+    List<Future<DataRow>> results = new ArrayList<Future<DataRow>>();
     for (CSVRecord csvRecord : parser) {
       String patientId = csvRecord.get(patientIdIndex);
       if (uniquePatientIds.contains(patientId)) {
@@ -143,11 +175,24 @@ public class Engine {
       uniquePatientIds.add(patientId);
 
       DataRow row = csvRecordToDataRow(csvRecord);
-      RecordProcessor processor = new RecordProcessor(steps);
-      dumpRow(row);  // TODO - Remove this
-      row = processor.run(row);
-      dumpRow(row);  // TODO - Remove this
+      Future<DataRow> result = executorService.submit(new CalculationThread(row, this.parameters.isRunNormalizationStep(),
+              this.parameters.getRecordExceptionMode(), this.prefixes, this.suffixes, this.genericNames,
+              this.hashParameters));
+      results.add(result);
     }
+
+
+    for (Future<DataRow> result : results) {
+      try {
+        result.get();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      } catch (ExecutionException e) {
+        e.printStackTrace();
+      }
+    }
+
+    executorService.shutdown();
   }
 
   /**
