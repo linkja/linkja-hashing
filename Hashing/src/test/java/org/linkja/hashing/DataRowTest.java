@@ -129,6 +129,44 @@ class DataRowTest {
   }
 
   @Test
+  void updateDerivedRow_DoesNotExist() {
+    DataRow row = new DataRow();
+    DataRow derivedRow = new DataRow();
+    derivedRow.setRowNumber(1);
+    row.addDerivedRow(derivedRow);
+
+    DataRow invalidDerivedRow = new DataRow();
+    invalidDerivedRow.setRowNumber(2);
+    assertThrows(Exception.class, () -> row.updateDerivedRow(invalidDerivedRow, derivedRow));
+  }
+
+  @Test
+  void updateDerivedRow_DeleteIfNull() throws Exception {
+    DataRow row = new DataRow();
+    DataRow derivedRow = new DataRow();
+    row.addDerivedRow(derivedRow);
+    assert(row.hasDerivedRows());
+    row.updateDerivedRow(derivedRow, null);
+    assertFalse(row.hasDerivedRows());
+  }
+
+  @Test
+  void updateDerivedRow_Updates() throws Exception {
+    DataRow row = new DataRow();
+    DataRow derivedRow = new DataRow();
+    derivedRow.setRowNumber(1);
+    derivedRow.put(Engine.FIRST_NAME_FIELD, "TEST");
+    row.addDerivedRow(derivedRow);
+
+    DataRow newDerivedRow = new DataRow();
+    newDerivedRow.setRowNumber(1);
+    newDerivedRow.put(Engine.FIRST_NAME_FIELD, "UPDATED");
+    newDerivedRow.setRowNumber(1);
+    row.updateDerivedRow(derivedRow, newDerivedRow);
+    assertEquals("UPDATED", row.getDerivedRows().get(0).get(Engine.FIRST_NAME_FIELD));
+  }
+
+  @Test
   void hasDerivedRows() {
     DataRow row = new DataRow();
     assertFalse(row.hasDerivedRows());

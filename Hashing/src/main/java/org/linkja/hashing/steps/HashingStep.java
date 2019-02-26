@@ -55,20 +55,32 @@ public class HashingStep implements IStep {
     // We allow ourselves to assume the presence and correct format of all required fields at this point.
     row = patientIDHash(row);
     row = fnamelnamedobHash(row);
-    row = fnamelnamedobssnHash(row);
-    row = lnamefnamedobssnHash(row);
     row = lnamefnamedobHash(row);
-    row = fnamelnameTdobssnHash(row);
     row = fnamelnameTdobHash(row);
-    row = fname3lnamedobssnHash(row);
     row = fname3lnamedobHash(row);
-    row = fnamelnamedobDssnHash(row);
-    row = fnamelnamedobYssnHash(row);
 
     // Only perform SSN hashes when SSN is set
     if (row.containsKey(Engine.SOCIAL_SECURITY_NUMBER) && row.get(Engine.SOCIAL_SECURITY_NUMBER).length() > 0) {
       row = fnamelnamedobssnHash(row);
+      row = lnamefnamedobssnHash(row);
+      row = fnamelnamedobssnHash(row);
+      row = fnamelnameTdobssnHash(row);
+      row = fname3lnamedobssnHash(row);
+      row = fnamelnamedobDssnHash(row);
+      row = fnamelnamedobYssnHash(row);
     }
+
+    // Process all of our derived rows
+    if (row.hasDerivedRows()) {
+      for (DataRow derivedRow : row.getDerivedRows()) {
+        try {
+          row.updateDerivedRow(derivedRow, run(derivedRow));
+        } catch (Exception e) {
+          row.setInvalidReason(String.format("An exception was caught when trying to update a derived row. %s", e.getMessage()));
+        }
+      }
+    }
+
     return row;
   }
 
@@ -77,6 +89,10 @@ public class HashingStep implements IStep {
     return this.getClass().getSimpleName();
   }
 
+  /**
+   * Utility method to allow caching of some conversions that we use multiple times in other methods.
+   * @param row
+   */
   public void cacheConvertedData(DataRow row) {
     // Cache this so it doesn't have to be re-parsed each time.
     this.convertedDateOfBirth = LocalDate.parse(row.get(Engine.DATE_OF_BIRTH_FIELD), NormalizationStep.NORMALIZED_DATE_OF_BIRTH_FORMAT);

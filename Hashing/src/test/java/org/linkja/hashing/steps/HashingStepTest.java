@@ -52,17 +52,75 @@ class HashingStepTest {
     row = step.run(row);
     assertEquals(16, row.keySet().size());
 
-    assertNotEquals("", row.get(HashingStep.PIDHASH_FIELD));
-    assertNotEquals("", row.get(HashingStep.FNAMELNAMEDOBSSN_FIELD));
-    assertNotEquals("", row.get(HashingStep.FNAMELNAMEDOB_FIELD));
-    assertNotEquals("", row.get(HashingStep.LNAMEFNAMEDOBSSN_FIELD));
-    assertNotEquals("", row.get(HashingStep.LNAMEFNAMEDOB_FIELD));
-    assertNotEquals("", row.get(HashingStep.FNAMELNAMETDOBSSN_FIELD));
-    assertNotEquals("", row.get(HashingStep.FNAMELNAMETDOB_FIELD));
-    assertNotEquals("", row.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD));
-    assertNotEquals("", row.get(HashingStep.FNAME3LNAMEDOB_FIELD));
-    assertNotEquals("", row.get(HashingStep.FNAMELNAMEDOBDSSN_FIELD));
-    assertNotEquals("", row.get(HashingStep.FNAMELNAMEDOBYSSN_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.PIDHASH_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.FNAMELNAMEDOBSSN_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.FNAMELNAMEDOB_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.LNAMEFNAMEDOBSSN_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.LNAMEFNAMEDOB_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.FNAMELNAMETDOBSSN_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.FNAMELNAMETDOB_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.FNAME3LNAMEDOB_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.FNAMELNAMEDOBDSSN_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.FNAMELNAMEDOBYSSN_FIELD));
+  }
+
+  @Test
+  void run_SetsAllHashedFieldsNonSSN() {
+    DataRow row = new DataRow();
+    row.put(Engine.PATIENT_ID_FIELD, "12345");
+    row.put(Engine.FIRST_NAME_FIELD, "JON");
+    row.put(Engine.LAST_NAME_FIELD, "DOE");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
+    row.addCompletedStep(new ValidationFilterStep().getStepName());
+    HashParameters parameters = new HashParameters();
+    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateDate(LocalDate.parse("2018-05-05"));
+
+    HashingStep step = new HashingStep(parameters);
+    assertEquals(4, row.keySet().size());
+    row = step.run(row);
+    assertEquals(9, row.keySet().size());
+
+    assertNotNulLOrEmpty(row.get(HashingStep.PIDHASH_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.FNAMELNAMEDOB_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.LNAMEFNAMEDOB_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.FNAMELNAMETDOB_FIELD));
+    assertNotNulLOrEmpty(row.get(HashingStep.FNAME3LNAMEDOB_FIELD));
+
+    assertNull(row.get(HashingStep.FNAMELNAMEDOBSSN_FIELD));
+    assertNull(row.get(HashingStep.LNAMEFNAMEDOBSSN_FIELD));
+    assertNull(row.get(HashingStep.FNAMELNAMETDOBSSN_FIELD));
+    assertNull(row.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD));
+    assertNull(row.get(HashingStep.FNAMELNAMEDOBDSSN_FIELD));
+    assertNull(row.get(HashingStep.FNAMELNAMEDOBYSSN_FIELD));
+  }
+
+  @Test
+  void run_ProcessesAllDerivedRows() {
+    DataRow row = createRow("12345", "JON", "DOESMITH", "1950-06-06", "5555", true);
+    row.addDerivedRow(createRow("12345", "JON", "DOE", "1950-06-06", "5555", true));
+    row.addDerivedRow(createRow("12345", "JON", "SMITH", "1950-06-06", "5555", true));
+    HashParameters parameters = new HashParameters();
+    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateDate(LocalDate.parse("2018-05-05"));
+
+    HashingStep step = new HashingStep(parameters);
+    row = step.run(row);
+
+    for (DataRow derivedRow : row.getDerivedRows()) {
+      assertNotNulLOrEmpty(derivedRow.get(HashingStep.PIDHASH_FIELD));
+      assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAMELNAMEDOBSSN_FIELD));
+      assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAMELNAMEDOB_FIELD));
+      assertNotNulLOrEmpty(derivedRow.get(HashingStep.LNAMEFNAMEDOBSSN_FIELD));
+      assertNotNulLOrEmpty(derivedRow.get(HashingStep.LNAMEFNAMEDOB_FIELD));
+      assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAMELNAMETDOBSSN_FIELD));
+      assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAMELNAMETDOB_FIELD));
+      assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD));
+      assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAME3LNAMEDOB_FIELD));
+      assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAMELNAMEDOBDSSN_FIELD));
+      assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAMELNAMEDOBYSSN_FIELD));
+    }
   }
 
   @Test
@@ -303,5 +361,23 @@ class HashingStepTest {
   void safeSubstring_LongRanges() {
     assertEquals("Test", HashingStep.safeSubstring("Test", 0, 500));
     assertEquals("st", HashingStep.safeSubstring("Test", 2, 5));
+  }
+
+  private DataRow createRow(String patientID, String firstName, String lastName, String dob, String ssn, boolean isValidated) {
+    DataRow row = new DataRow();
+    row.put(Engine.PATIENT_ID_FIELD, patientID);
+    row.put(Engine.FIRST_NAME_FIELD, firstName);
+    row.put(Engine.LAST_NAME_FIELD, lastName);
+    row.put(Engine.DATE_OF_BIRTH_FIELD, dob);
+    row.put(Engine.SOCIAL_SECURITY_NUMBER, ssn);
+    if (isValidated) {
+      row.addCompletedStep(new ValidationFilterStep().getStepName());
+    }
+    return row;
+  }
+
+  private void assertNotNulLOrEmpty(String value) {
+    assertNotNull(value);
+    assertNotEquals("", value);
   }
 }

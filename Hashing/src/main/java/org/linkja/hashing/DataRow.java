@@ -97,6 +97,29 @@ public class DataRow extends HashMap<String, String> implements Cloneable {
   }
 
   /**
+   * Updates an existing data row in our list of derived rows.
+   * @param oldRow
+   * @param newRow
+   * @throws Exception
+   */
+  public void updateDerivedRow(DataRow oldRow, DataRow newRow) throws Exception {
+    // Find the old row.  This assumes the old row exists, so we do not fail gracefully if it's not found
+    int oldRowIndex = this.derivedRows.indexOf(oldRow);
+    if (oldRowIndex < 0) {
+      throw new Exception("Attempted to update a derived row, but the existing object was not found");
+    }
+
+    // If the user tells us to update the derived row with a null one, we will delete the entry entirely to clean up
+    // the collection.
+    if (newRow == null) {
+      this.derivedRows.remove(oldRowIndex);
+    }
+    else {
+      this.derivedRows.set(oldRowIndex, newRow);
+    }
+  }
+
+  /**
    * Determine if this data row still qualifies for additional processing steps.  This can be changed by actions in
    * different processing steps.
    * @return
