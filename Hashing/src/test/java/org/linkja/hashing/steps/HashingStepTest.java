@@ -35,6 +35,37 @@ class HashingStepTest {
   }
 
   @Test
+  void run_SetsAllHashedFields() {
+    DataRow row = new DataRow();
+    row.put(Engine.PATIENT_ID_FIELD, "12345");
+    row.put(Engine.FIRST_NAME_FIELD, "JON");
+    row.put(Engine.LAST_NAME_FIELD, "DOE");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
+    row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
+    row.addCompletedStep(new ValidationFilterStep().getStepName());
+    HashParameters parameters = new HashParameters();
+    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateDate(LocalDate.parse("2018-05-05"));
+
+    HashingStep step = new HashingStep(parameters);
+    assertEquals(5, row.keySet().size());
+    row = step.run(row);
+    assertEquals(16, row.keySet().size());
+
+    assertNotEquals("", row.get(HashingStep.PIDHASH_FIELD));
+    assertNotEquals("", row.get(HashingStep.FNAMELNAMEDOBSSN_FIELD));
+    assertNotEquals("", row.get(HashingStep.FNAMELNAMEDOB_FIELD));
+    assertNotEquals("", row.get(HashingStep.LNAMEFNAMEDOBSSN_FIELD));
+    assertNotEquals("", row.get(HashingStep.LNAMEFNAMEDOB_FIELD));
+    assertNotEquals("", row.get(HashingStep.FNAMELNAMETDOBSSN_FIELD));
+    assertNotEquals("", row.get(HashingStep.FNAMELNAMETDOB_FIELD));
+    assertNotEquals("", row.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD));
+    assertNotEquals("", row.get(HashingStep.FNAME3LNAMEDOB_FIELD));
+    assertNotEquals("", row.get(HashingStep.FNAMELNAMEDOBDSSN_FIELD));
+    assertNotEquals("", row.get(HashingStep.FNAMELNAMEDOBYSSN_FIELD));
+  }
+
+  @Test
   void run_DoesNotTrackCompletedStepWhenInvalid() {
     DataRow row = new DataRow();
     row.setInvalidReason("Invalid for testing purposes");

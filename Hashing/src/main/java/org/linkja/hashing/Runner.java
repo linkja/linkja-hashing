@@ -6,15 +6,13 @@ import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.*;
-import java.security.spec.InvalidKeySpecException;
 import java.util.Properties;
 
 // TODO: Write unit tests for helper methods (everything but main)
@@ -45,13 +43,14 @@ public class Runner {
       parameters.setPrivateDate(cmd.getOptionValue("privateDate"));
       parameters.setDelimiter(cmd.getOptionValue("delimiter", new String(new char[] { EngineParameters.DEFAULT_DELIMITER })));
       parameters.setRecordExceptionMode(parseRecordExceptionMode(cmd.getOptionValue("exceptionMode")));
+      parameters.setWriteUnhashedData(cmd.getOptionValue("writeUnhashed"));
       parameters = loadConfig(parameters);
-//      String outputDirectory = cmd.getOptionValue("outDirectory");
-//      if (outputDirectory == null || outputDirectory.equals("")) {
-//        Path path = FileSystems.getDefault().getPath(".").toAbsolutePath();
-//        outputDirectory = path.toString();
-//      }
-//      parameters.setOutputDirectory(outputDirectory);
+      String outputDirectory = cmd.getOptionValue("outDirectory");
+      if (outputDirectory == null || outputDirectory.equals("")) {
+        Path path = FileSystems.getDefault().getPath(".").toAbsolutePath();
+        outputDirectory = path.toString();
+      }
+      parameters.setOutputDirectory(outputDirectory);
     }
     catch (Exception exc) {
       displayCommandLineException(exc, options);
@@ -72,6 +71,9 @@ public class Runner {
     try {
       Engine engine = new Engine(parameters, hashParameters);
       engine.run();
+
+      String report = String.join("\r\n", engine.getExecutionReport());
+      System.out.println(report);
     }
     catch (Exception exc) {
       System.out.println("ERROR - We encountered an error while processing your data file");
@@ -171,6 +173,10 @@ public class Runner {
     Option delimiterOpt = new Option("delim", "delimiter", true, "the delimiter used within the patient data file");
     delimiterOpt.setRequired(false);
     options.addOption(delimiterOpt);
+
+    Option writeUnhashedOpt = new Option("unhashed", "writeUnhashed", true, "write out the original unhashed data in the result file (for debugging");
+    writeUnhashedOpt.setRequired(false);
+    options.addOption(writeUnhashedOpt);
 
     return options;
   }

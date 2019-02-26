@@ -2,9 +2,11 @@ package org.linkja.hashing;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.linkja.hashing.steps.*;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -37,6 +39,8 @@ public class Engine {
   private static ArrayList<String> prefixes = null;
   private static ArrayList<String> suffixes = null;
   private static HashMap<String, String> genericNames = null;
+
+  private ArrayList<String> executionReport = new ArrayList<String>();
 
 
   public Engine(EngineParameters parameters, HashParameters hashParameters) {
@@ -101,7 +105,10 @@ public class Engine {
     return row;
   }
 
-  private static class CalculationThread implements Callable<DataRow> {
+  /**
+   * Internal worker class to manage the actual engine
+   */
+  private static class EngineThread implements Callable<DataRow> {
     private DataRow dataRow;
     private boolean runNormalizationStep;
     private EngineParameters.RecordExceptionMode exceptionMode;
@@ -110,9 +117,9 @@ public class Engine {
     private static HashMap<String, String> genericNames = null;
     private static HashParameters hashParameters;
 
-    public CalculationThread(DataRow dataRow, boolean runNormalizationStep,EngineParameters.RecordExceptionMode exceptionMode,
-                             ArrayList<String> prefixes, ArrayList<String> suffixes, HashMap<String, String> genericNames,
-                             HashParameters hashParameters) {
+    public EngineThread(DataRow dataRow, boolean runNormalizationStep, EngineParameters.RecordExceptionMode exceptionMode,
+                        ArrayList<String> prefixes, ArrayList<String> suffixes, HashMap<String, String> genericNames,
+                        HashParameters hashParameters) {
       this.dataRow = dataRow;
       this.runNormalizationStep = runNormalizationStep;
       this.exceptionMode = exceptionMode;
@@ -177,36 +184,140 @@ public class Engine {
       uniquePatientIds.add(patientId);
 
       DataRow row = csvRecordToDataRow(csvRecord);
-      Future<DataRow> result = taskQueue.submit(new CalculationThread(row, this.parameters.isRunNormalizationStep(),
+      taskQueue.submit(new EngineThread(row, this.parameters.isRunNormalizationStep(),
               this.parameters.getRecordExceptionMode(), this.prefixes, this.suffixes, this.genericNames,
               this.hashParameters));
       numSubmittedJobs++;
     }
 
-    //Output the long values of all my tasks in order of completion.
+    BufferedWriter writer = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),"output.csv"));
+    CSVPrinter csvPrinter = createCSVPrinter(writer);
     try {
-      for(int index = 0; index < numSubmittedJobs; index++) {
+      for (int index = 0; index < numSubmittedJobs; index++) {
         Future<DataRow> task = taskQueue.take();
-        writeDataRowResult(task.get());
+        writeDataRowResult(csvPrinter, task.get());
       }
+      csvPrinter.flush();
+
+      executionReport.add(String.format("Completed writing %d data rows", numSubmittedJobs));
     }
     catch (Exception exc) {
+      executionReport.add("An exception was thrown while writing out the results.  The output file is incomplete and should not be used.");
+      executionReport.add(exc.getMessage());
       exc.printStackTrace();
     }
 
+    writer.close();
     threadPool.shutdown();
   }
 
-  private void writeDataRowResult(DataRow row) {
+  /**
+   * Utility method to create the CSVPrinter object with the appropriate header columns (based on parameters on how
+   * the Engine should run)
+    * @param writer An open file writer to connect the CSVPrinter to
+   * @return The instantiated CSVPrinter object
+   * @throws IOException
+   */
+  private CSVPrinter createCSVPrinter(BufferedWriter writer) throws IOException {
+    if (parameters.isWriteUnhashedData()) {
+      return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
+              Engine.PATIENT_ID_FIELD,
+              Engine.FIRST_NAME_FIELD,
+              Engine.LAST_NAME_FIELD,
+              Engine.DATE_OF_BIRTH_FIELD,
+              Engine.SOCIAL_SECURITY_NUMBER,
+              HashingStep.PIDHASH_FIELD,
+              HashingStep.FNAMELNAMEDOBSSN_FIELD,
+              HashingStep.FNAMELNAMEDOB_FIELD,
+              HashingStep.LNAMEFNAMEDOBSSN_FIELD,
+              HashingStep.LNAMEFNAMEDOB_FIELD,
+              HashingStep.FNAMELNAMETDOBSSN_FIELD,
+              HashingStep.FNAMELNAMETDOB_FIELD,
+              HashingStep.FNAME3LNAMEDOBSSN_FIELD,
+              HashingStep.FNAME3LNAMEDOB_FIELD,
+              HashingStep.FNAMELNAMEDOBDSSN_FIELD,
+              HashingStep.FNAMELNAMEDOBYSSN_FIELD,
+              Engine.EXCEPTION_FLAG));
+    }
+    else {
+      return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
+              HashingStep.PIDHASH_FIELD,
+              HashingStep.FNAMELNAMEDOBSSN_FIELD,
+              HashingStep.FNAMELNAMEDOB_FIELD,
+              HashingStep.LNAMEFNAMEDOBSSN_FIELD,
+              HashingStep.LNAMEFNAMEDOB_FIELD,
+              HashingStep.FNAMELNAMETDOBSSN_FIELD,
+              HashingStep.FNAMELNAMETDOB_FIELD,
+              HashingStep.FNAME3LNAMEDOBSSN_FIELD,
+              HashingStep.FNAME3LNAMEDOB_FIELD,
+              HashingStep.FNAMELNAMEDOBDSSN_FIELD,
+              HashingStep.FNAMELNAMEDOBYSSN_FIELD,
+              Engine.EXCEPTION_FLAG));
+    }
+  }
+
+  /**
+   * Utility method to write out the appropriate columns for a data row.
+   * @param dataPrinter
+   * @param row
+   * @throws IOException
+   */
+  private void writeDataRowResult(CSVPrinter dataPrinter, DataRow row) throws IOException {
     if (row == null) {
       return;
     }
 
-    if (row.getInvalidReason() == null || row.getInvalidReason().equals("")) {
+    // If the SSN is not set, we write out a blank string.  Although we can generate a hash with a blank SSN, it's
+    // potentially misleading during the matching phase, so we choose instead to not provide output for SSN-related hashes.
+    boolean hasSsn = !(row.get(Engine.SOCIAL_SECURITY_NUMBER) == null || row.get(Engine.SOCIAL_SECURITY_NUMBER).equals(""));
+    if (row.shouldProcess()) {
+      if (parameters.isWriteUnhashedData()) {
+        dataPrinter.printRecord(
+                row.get(Engine.PATIENT_ID_FIELD),
+                row.get(Engine.FIRST_NAME_FIELD),
+                row.get(Engine.LAST_NAME_FIELD),
+                row.get(Engine.DATE_OF_BIRTH_FIELD),
+                hasSsn ? row.get(Engine.SOCIAL_SECURITY_NUMBER) : "",
+                row.get(HashingStep.PIDHASH_FIELD),
+                hasSsn ? row.get(HashingStep.FNAMELNAMEDOBSSN_FIELD) : "",
+                row.get(HashingStep.FNAMELNAMEDOB_FIELD),
+                hasSsn ? row.get(HashingStep.LNAMEFNAMEDOBSSN_FIELD) : "",
+                row.get(HashingStep.LNAMEFNAMEDOB_FIELD),
+                hasSsn ? row.get(HashingStep.FNAMELNAMETDOBSSN_FIELD) : "",
+                row.get(HashingStep.FNAMELNAMETDOB_FIELD),
+                hasSsn ? row.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD) : "",
+                row.get(HashingStep.FNAME3LNAMEDOB_FIELD),
+                hasSsn ? row.get(HashingStep.FNAMELNAMEDOBDSSN_FIELD) : "",
+                hasSsn ? row.get(HashingStep.FNAMELNAMEDOBYSSN_FIELD) : "",
+                row.isException() ? "1" : "0"
+        );
+      }
+      else {
+        dataPrinter.printRecord(
+                row.get(HashingStep.PIDHASH_FIELD),
+                hasSsn ? row.get(HashingStep.FNAMELNAMEDOBSSN_FIELD) : "",
+                row.get(HashingStep.FNAMELNAMEDOB_FIELD),
+                hasSsn ? row.get(HashingStep.LNAMEFNAMEDOBSSN_FIELD) : "",
+                row.get(HashingStep.LNAMEFNAMEDOB_FIELD),
+                hasSsn ? row.get(HashingStep.FNAMELNAMETDOBSSN_FIELD) : "",
+                row.get(HashingStep.FNAMELNAMETDOB_FIELD),
+                hasSsn ? row.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD) : "",
+                row.get(HashingStep.FNAME3LNAMEDOB_FIELD),
+                hasSsn ? row.get(HashingStep.FNAMELNAMEDOBDSSN_FIELD) : "",
+                hasSsn ? row.get(HashingStep.FNAMELNAMEDOBYSSN_FIELD) : "",
+                row.isException() ? "1" : "0"
+        );
+      }
 
+      // Process all derived rows as well
+      if (row.hasDerivedRows()) {
+        for (DataRow derivedRow : row.getDerivedRows()) {
+          writeDataRowResult(dataPrinter, derivedRow);
+        }
+      }
     }
     else {
-      System.out.println("INVALID ROW: ");
+      System.out.printf("INVALID ROW: row number %d\r\n", row.getRowNumber());
       dumpRow(row);
     }
   }
@@ -279,5 +390,9 @@ public class Engine {
 
   public EngineParameters getParameters() {
     return parameters;
+  }
+
+  public ArrayList<String> getExecutionReport() {
+    return executionReport;
   }
 }

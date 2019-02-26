@@ -55,6 +55,15 @@ public class HashingStep implements IStep {
     // We allow ourselves to assume the presence and correct format of all required fields at this point.
     row = patientIDHash(row);
     row = fnamelnamedobHash(row);
+    row = fnamelnamedobssnHash(row);
+    row = lnamefnamedobssnHash(row);
+    row = lnamefnamedobHash(row);
+    row = fnamelnameTdobssnHash(row);
+    row = fnamelnameTdobHash(row);
+    row = fname3lnamedobssnHash(row);
+    row = fname3lnamedobHash(row);
+    row = fnamelnamedobDssnHash(row);
+    row = fnamelnamedobYssnHash(row);
 
     // Only perform SSN hashes when SSN is set
     if (row.containsKey(Engine.SOCIAL_SECURITY_NUMBER) && row.get(Engine.SOCIAL_SECURITY_NUMBER).length() > 0) {
