@@ -78,7 +78,8 @@ public class NormalizationStep implements IStep {
   private static final String[] STRIP_STRING_COLLECTION = new String[] { "-", "  "};
 
   /**
-   * After other processing steps have been completed, this specifies the characters to remove.
+   * After other processing steps have been completed, this specifies the characters to remove (which is defined as the
+   * opposite of the characters we want to keep).
    */
   private static final String INVALID_CHARACTERS_PATTERN = "[^A-Za-z ]";
 

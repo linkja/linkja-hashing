@@ -43,11 +43,12 @@ class PermuteStepTest {
   @Test
   void permuteLastName_TwoNames() {
     PermuteStep step = new PermuteStep();
+    String expectedOriginalLastName = "SMITHOLSON";
     for (String delimiter : DELIMITERS) {
       DataRow row = new DataRow();
       row.put(Engine.LAST_NAME_FIELD, String.format("SMITH%sOLSON", delimiter));
       row = step.permuteLastName(row);
-      assertEquals(String.format("SMITH%sOLSON", delimiter), row.get(Engine.LAST_NAME_FIELD));
+      assertEquals(expectedOriginalLastName, row.get(Engine.LAST_NAME_FIELD));
       ArrayList<DataRow> derivedRows = row.getDerivedRows();
       assertEquals(2, derivedRows.size());
       assertEquals("SMITH", derivedRows.get(0).get(Engine.LAST_NAME_FIELD));
@@ -62,7 +63,7 @@ class PermuteStepTest {
       DataRow row = new DataRow();
       row.put(Engine.LAST_NAME_FIELD, String.format("SMITH%sOLSON%sJONES%sDOE", delimiter, delimiter, delimiter));
       row = step.permuteLastName(row);
-      assertEquals(String.format("SMITH%sOLSON%sJONES%sDOE", delimiter, delimiter, delimiter), row.get(Engine.LAST_NAME_FIELD));
+      assertEquals("SMITHOLSONJONESDOE", row.get(Engine.LAST_NAME_FIELD));
       ArrayList<DataRow> derivedRows = row.getDerivedRows();
       assertEquals(2, derivedRows.size());
       assertEquals("SMITH", derivedRows.get(0).get(Engine.LAST_NAME_FIELD));
@@ -73,7 +74,7 @@ class PermuteStepTest {
   @Test
   void run_TracksCompletedStep() {
     DataRow row = new DataRow() {{
-      put(Engine.FIRST_NAME_FIELD, "BABY ");
+      put(Engine.FIRST_NAME_FIELD, "JOE ");
       put(Engine.PATIENT_ID_FIELD, "123456");
       put(Engine.LAST_NAME_FIELD, "SMITH");
     }};
@@ -86,7 +87,7 @@ class PermuteStepTest {
   @Test
   void run_DoesNotTrackCompletedStepWhenInvalid() {
     DataRow row = new DataRow() {{
-      put(Engine.FIRST_NAME_FIELD, "BABY ");
+      put(Engine.FIRST_NAME_FIELD, "JOE ");
       put(Engine.PATIENT_ID_FIELD, "123456");
       put(Engine.LAST_NAME_FIELD, "SMITH");
     }};

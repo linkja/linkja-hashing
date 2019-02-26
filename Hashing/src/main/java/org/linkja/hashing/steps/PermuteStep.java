@@ -25,6 +25,12 @@ public class PermuteStep implements IStep {
   }
 
   /**
+   * After the permutations have been completed, this is used to clean up the strings so that just alphabetic characters
+   * remain.
+   */
+  private static final String INVALID_CHARACTERS_PATTERN = "[^A-Z]";
+
+  /**
    * Given a last name, create permutations if there are multiple parts to the name.  This will retain the original
    * record as the main DataRow data, and create new derived DataRow objects.
    * e.g., SMITH-JONES
@@ -62,12 +68,27 @@ public class PermuteStep implements IStep {
     DataRow firstPartRow = (DataRow)row.clone();
     DataRow lastPartRow = (DataRow)row.clone();
 
-    firstPartRow.put(Engine.LAST_NAME_FIELD, firstPart);
+    firstPartRow.put(Engine.LAST_NAME_FIELD, removeUnwantedCharacters(firstPart));
     row.addDerivedRow(firstPartRow);
 
-    lastPartRow.put(Engine.LAST_NAME_FIELD, lastPart);
+    lastPartRow.put(Engine.LAST_NAME_FIELD, removeUnwantedCharacters(lastPart));
     row.addDerivedRow(lastPartRow);
 
+    row.put(Engine.LAST_NAME_FIELD, removeUnwantedCharacters(lastName));
+
     return row;
+  }
+
+  /**
+   * Remove from the parameter string all invalid characters, as defined within INVALID_CHARACTERS_PATTERN
+   * @param data The string to remove unwanted characters from
+   * @return An updated string (trimmed), or null if the input is null
+   */
+  public String removeUnwantedCharacters(String data) {
+    if (data == null) {
+      return null;
+    }
+
+    return data.toUpperCase().replaceAll(INVALID_CHARACTERS_PATTERN, "").trim();
   }
 }
