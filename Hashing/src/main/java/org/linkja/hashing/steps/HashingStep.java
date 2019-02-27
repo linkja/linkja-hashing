@@ -130,7 +130,7 @@ public class HashingStep implements IStep {
   public DataRow fnamelnamedobHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s",
             row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.LAST_NAME_FIELD), row.get(Engine.DATE_OF_BIRTH_FIELD),
-            this.parameters.getPrivateSalt());
+            this.parameters.getProjectSalt());
     row.put(FNAMELNAMEDOB_FIELD, getHashString(hashInput));
     return row;
   }
@@ -143,7 +143,7 @@ public class HashingStep implements IStep {
   public DataRow fnamelnamedobssnHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s%s",
             row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.LAST_NAME_FIELD), row.get(Engine.DATE_OF_BIRTH_FIELD),
-            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getPrivateSalt());
+            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getProjectSalt());
     row.put(FNAMELNAMEDOBSSN_FIELD, getHashString(hashInput));
     return row;
   }
@@ -156,7 +156,7 @@ public class HashingStep implements IStep {
   public DataRow lnamefnamedobssnHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s%s",
             row.get(Engine.LAST_NAME_FIELD), row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.DATE_OF_BIRTH_FIELD),
-            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getPrivateSalt());
+            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getProjectSalt());
     row.put(LNAMEFNAMEDOBSSN_FIELD, getHashString(hashInput));
     return row;
   }
@@ -169,7 +169,7 @@ public class HashingStep implements IStep {
   public DataRow lnamefnamedobHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s",
             row.get(Engine.LAST_NAME_FIELD), row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.DATE_OF_BIRTH_FIELD),
-            this.parameters.getPrivateSalt());
+            this.parameters.getProjectSalt());
     row.put(LNAMEFNAMEDOB_FIELD, getHashString(hashInput));
     return row;
   }
@@ -182,7 +182,7 @@ public class HashingStep implements IStep {
   public DataRow fnamelnameTdobssnHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s%s",
             row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.LAST_NAME_FIELD), this.convertedDateOfBirth.format(TRANSPOSE_DAY_MONTH_FORMAT),
-            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getPrivateSalt());
+            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getProjectSalt());
     row.put(FNAMELNAMETDOBSSN_FIELD, getHashString(hashInput));
     return row;
   }
@@ -195,7 +195,7 @@ public class HashingStep implements IStep {
   public DataRow fnamelnameTdobHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s",
             row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.LAST_NAME_FIELD), this.convertedDateOfBirth.format(TRANSPOSE_DAY_MONTH_FORMAT),
-            this.parameters.getPrivateSalt());
+            this.parameters.getProjectSalt());
     row.put(FNAMELNAMETDOB_FIELD, getHashString(hashInput));
     return row;
   }
@@ -208,7 +208,7 @@ public class HashingStep implements IStep {
   public DataRow fname3lnamedobssnHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s%s",
             safeSubstring(row.get(Engine.FIRST_NAME_FIELD), 0, 3), row.get(Engine.LAST_NAME_FIELD), row.get(Engine.DATE_OF_BIRTH_FIELD),
-            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getPrivateSalt());
+            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getProjectSalt());
     row.put(FNAME3LNAMEDOBSSN_FIELD, getHashString(hashInput));
     return row;
   }
@@ -221,7 +221,7 @@ public class HashingStep implements IStep {
   public DataRow fname3lnamedobHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s",
             safeSubstring(row.get(Engine.FIRST_NAME_FIELD), 0, 3), row.get(Engine.LAST_NAME_FIELD), row.get(Engine.DATE_OF_BIRTH_FIELD),
-            this.parameters.getPrivateSalt());
+            this.parameters.getProjectSalt());
     row.put(FNAME3LNAMEDOB_FIELD, getHashString(hashInput));
     return row;
   }
@@ -234,7 +234,7 @@ public class HashingStep implements IStep {
   public DataRow fnamelnamedobDssnHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s%s",
             row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.LAST_NAME_FIELD), this.convertedDateOfBirth.plusDays(1).format(NormalizationStep.NORMALIZED_DATE_OF_BIRTH_FORMAT),
-            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getPrivateSalt());
+            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getProjectSalt());
     row.put(FNAMELNAMEDOBDSSN_FIELD, getHashString(hashInput));
     return row;
   }
@@ -247,7 +247,7 @@ public class HashingStep implements IStep {
   public DataRow fnamelnamedobYssnHash(DataRow row) {
     String hashInput = String.format("%s%s%s%s%s",
             row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.LAST_NAME_FIELD), this.convertedDateOfBirth.plusYears(1).format(NormalizationStep.NORMALIZED_DATE_OF_BIRTH_FORMAT),
-            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getPrivateSalt());
+            row.get(Engine.SOCIAL_SECURITY_NUMBER), this.parameters.getProjectSalt());
     row.put(FNAMELNAMEDOBYSSN_FIELD, getHashString(hashInput));
     return row;
   }

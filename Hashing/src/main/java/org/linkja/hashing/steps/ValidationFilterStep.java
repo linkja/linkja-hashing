@@ -151,7 +151,7 @@ public class ValidationFilterStep implements IStep {
     }
 
     try {
-      LocalDate.parse(dateString, DATE_OF_BIRTH_FORMATTER);
+      LocalDate.parse(dateString.trim(), DATE_OF_BIRTH_FORMATTER);
       return true;
     }
     catch (DateTimeParseException exc) {

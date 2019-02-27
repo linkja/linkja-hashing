@@ -97,4 +97,18 @@ class PermuteStepTest {
     row = step.run(row);
     assertFalse(row.hasCompletedStep(step.getStepName()));
   }
+
+  @Test
+  void run_StripsInvalidCharsFromName() {
+    DataRow row = new DataRow() {{
+      put(Engine.FIRST_NAME_FIELD, " JO ELLEN ");
+      put(Engine.PATIENT_ID_FIELD, "123456");
+      put(Engine.LAST_NAME_FIELD, " SMITH ");
+    }};
+
+    PermuteStep step = new PermuteStep();
+    row = step.run(row);
+    assertEquals("JOELLEN", row.get(Engine.FIRST_NAME_FIELD));
+    assertEquals("SMITH", row.get(Engine.LAST_NAME_FIELD));
+  }
 }

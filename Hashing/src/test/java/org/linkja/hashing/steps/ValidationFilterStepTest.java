@@ -159,6 +159,17 @@ class ValidationFilterStepTest {
     row = step.checkFieldFormat(row);
     assertNull(row.getInvalidReason());
 
+    // Try different formats of date
+    row.setInvalidReason(null);
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "   1/17/1950   ");
+    row = step.checkFieldFormat(row);
+    assertNull(row.getInvalidReason());
+
+    row.setInvalidReason(null);
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "   19500117   ");
+    row = step.checkFieldFormat(row);
+    assertNull(row.getInvalidReason());
+
     // We also make sure that things that may seem invalid are considered valid - this includes all whitespace or empty
     // SSN entries.
     row.setInvalidReason(null);
