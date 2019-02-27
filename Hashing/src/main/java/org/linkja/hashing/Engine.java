@@ -108,8 +108,8 @@ public class Engine {
   /**
    * Internal worker class to manage the actual engine
    */
-  private static class EngineThread implements Callable<DataRow> {
-    private DataRow dataRow;
+  private static class EngineThread implements Callable<List<DataRow>> {
+    private List<DataRow> dataRows;
     private boolean runNormalizationStep;
     private EngineParameters.RecordExceptionMode exceptionMode;
     private static ArrayList<String> prefixes = null;
@@ -117,10 +117,10 @@ public class Engine {
     private static HashMap<String, String> genericNames = null;
     private static HashParameters hashParameters;
 
-    public EngineThread(DataRow dataRow, boolean runNormalizationStep, EngineParameters.RecordExceptionMode exceptionMode,
+    public EngineThread(List<DataRow> dataRows, boolean runNormalizationStep, EngineParameters.RecordExceptionMode exceptionMode,
                         ArrayList<String> prefixes, ArrayList<String> suffixes, HashMap<String, String> genericNames,
                         HashParameters hashParameters) {
-      this.dataRow = dataRow;
+      this.dataRows = new ArrayList<DataRow>(dataRows);
       this.runNormalizationStep = runNormalizationStep;
       this.exceptionMode = exceptionMode;
       this.prefixes = prefixes;
@@ -130,7 +130,7 @@ public class Engine {
     }
 
     @Override
-    public DataRow call() throws Exception {
+    public List<DataRow> call() throws Exception {
       ArrayList<IStep> steps = new ArrayList<IStep>();
       steps.add(new ValidationFilterStep());
       // The user can configure the system to skip normalization, if they prefer to handle that externally
@@ -147,7 +147,12 @@ public class Engine {
       steps.add(new HashingStep(this.hashParameters));
 
       RecordProcessor processor = new RecordProcessor(steps);
-      return processor.run(this.dataRow);
+      List<DataRow> results = new ArrayList<DataRow>();
+      for (DataRow row : this.dataRows) {
+        results.add(processor.run(row));
+      }
+      //return processor.run(this.dataRow);
+      return results;
     }
   }
 
@@ -169,11 +174,13 @@ public class Engine {
     int patientIdIndex = this.patientDataHeaderMap.findIndexOfCanonicalName(PATIENT_ID_FIELD);
 
     ExecutorService threadPool = Executors.newFixedThreadPool(parameters.getNumWorkerThreads());
-    ExecutorCompletionService<DataRow> taskQueue = new ExecutorCompletionService<DataRow>(threadPool);
+    ExecutorCompletionService<List<DataRow>> taskQueue = new ExecutorCompletionService<List<DataRow>>(threadPool);
 
     // Because our check for unique patient IDs requires knowing every ID that has been seen, and because our processing
     // steps do not hold state, we are performing this check as we load up our worker queue.
     int numSubmittedJobs = 0;
+    final int BATCH_SIZE = 100000;
+    ArrayList<DataRow> batch = new ArrayList<DataRow>(BATCH_SIZE);
     for (CSVRecord csvRecord : parser) {
       String patientId = csvRecord.get(patientIdIndex);
       if (uniquePatientIds.contains(patientId)) {
@@ -184,7 +191,23 @@ public class Engine {
       uniquePatientIds.add(patientId);
 
       DataRow row = csvRecordToDataRow(csvRecord);
-      taskQueue.submit(new EngineThread(row, this.parameters.isRunNormalizationStep(),
+      batch.add(row);
+
+      if (batch.size() == BATCH_SIZE) {
+        batch.trimToSize();
+        taskQueue.submit(new EngineThread(batch, this.parameters.isRunNormalizationStep(),
+                this.parameters.getRecordExceptionMode(), this.prefixes, this.suffixes, this.genericNames,
+                this.hashParameters));
+        batch.clear();
+        numSubmittedJobs++;
+      }
+    }
+
+    //System.gc();
+
+    if (batch.size() > 0) {
+      batch.trimToSize();
+      taskQueue.submit(new EngineThread(batch, this.parameters.isRunNormalizationStep(),
               this.parameters.getRecordExceptionMode(), this.prefixes, this.suffixes, this.genericNames,
               this.hashParameters));
       numSubmittedJobs++;
@@ -194,8 +217,10 @@ public class Engine {
     CSVPrinter csvPrinter = createCSVPrinter(writer);
     try {
       for (int index = 0; index < numSubmittedJobs; index++) {
-        Future<DataRow> task = taskQueue.take();
-        writeDataRowResult(csvPrinter, task.get());
+        System.out.printf("Processing %d of %d\r\n", index+1, numSubmittedJobs);
+        Future<List<DataRow>> task = taskQueue.take();
+        writeDataRowResults(csvPrinter, task.get());
+        task = null;
       }
       csvPrinter.flush();
 
@@ -254,6 +279,17 @@ public class Engine {
               HashingStep.FNAMELNAMEDOBYSSN_FIELD,
               Engine.EXCEPTION_FLAG));
     }
+  }
+
+  private void writeDataRowResults(CSVPrinter dataPrinter, List<DataRow> rows) throws IOException {
+    if (rows == null) {
+      return;
+    }
+
+    for (DataRow row : rows) {
+      writeDataRowResult(dataPrinter, row);
+    }
+    dataPrinter.flush();
   }
 
   /**
