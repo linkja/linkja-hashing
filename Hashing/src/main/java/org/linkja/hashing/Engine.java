@@ -28,6 +28,10 @@ public class Engine {
   public static final String SOCIAL_SECURITY_NUMBER = "social_security_number";
   public static final String EXCEPTION_FLAG = "exception_flag";
 
+  // List other canonical field names, used for output
+  public static final String SITE_ID_FIELD = "siteid";
+  public static final String PROJECT_ID_FIELD = "projectid";
+
   private static final String REQUIRED_COLUMNS_EXCEPTION_MESSAGE = "We require, at a minimum, columns for patient ID, first name, last name, and date of birth.\r\n" +
           "If you have these columns present, please make sure that the column header is specified, and that the column names are in our list of " +
           "recognized values.  Please see the project README for more information.";
@@ -221,6 +225,8 @@ public class Engine {
   private CSVPrinter createCSVPrinter(BufferedWriter writer) throws IOException {
     if (parameters.isWriteUnhashedData()) {
       return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
+              Engine.SITE_ID_FIELD,
+              Engine.PROJECT_ID_FIELD,
               Engine.PATIENT_ID_FIELD,
               Engine.FIRST_NAME_FIELD,
               Engine.LAST_NAME_FIELD,
@@ -241,6 +247,8 @@ public class Engine {
     }
     else {
       return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
+              Engine.SITE_ID_FIELD,
+              Engine.PROJECT_ID_FIELD,
               HashingStep.PIDHASH_FIELD,
               HashingStep.FNAMELNAMEDOBSSN_FIELD,
               HashingStep.FNAMELNAMEDOB_FIELD,
@@ -273,6 +281,8 @@ public class Engine {
     if (row.shouldProcess()) {
       if (parameters.isWriteUnhashedData()) {
         dataPrinter.printRecord(
+                this.hashParameters.getSiteId(),
+                this.hashParameters.getProjectId(),
                 row.get(Engine.PATIENT_ID_FIELD),
                 row.get(Engine.FIRST_NAME_FIELD),
                 row.get(Engine.LAST_NAME_FIELD),
@@ -294,6 +304,8 @@ public class Engine {
       }
       else {
         dataPrinter.printRecord(
+                this.hashParameters.getSiteId(),
+                this.hashParameters.getProjectId(),
                 row.get(HashingStep.PIDHASH_FIELD),
                 hasSsn ? row.get(HashingStep.FNAMELNAMEDOBSSN_FIELD) : "",
                 row.get(HashingStep.FNAMELNAMEDOB_FIELD),
