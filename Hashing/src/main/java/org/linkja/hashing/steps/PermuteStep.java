@@ -15,6 +15,7 @@ public class PermuteStep implements IStep {
     row.addCompletedStep(this.getStepName());
 
     row = permuteLastName(row);
+    row.put(Engine.FIRST_NAME_FIELD, removeUnwantedCharacters(row.get(Engine.FIRST_NAME_FIELD)));
 
     return row;
   }

@@ -14,3 +14,37 @@ This component includes a data pipeline to digest and validate the data, standar
 
 3.	Disambiguation / matching - 
 This component allows the aggregator to merge files, disambiguate the hashes and assign Universal patient ID to matching patients
+
+
+## Building
+linkja-hashing was built using Java JDK 1.8 (specifically [OpenJDK](https://openjdk.java.net/)).  It can be opened from within an IDE like Eclipse or IntelliJ IDEA and compiled, or compiled from the command line using [Maven](https://maven.apache.org/).
+
+`mvn clean package`
+
+This will compile the code, run all unit tests, and create an executable JAR file under the .\target folder with all dependency JARs included.  The JAR will be named something like `Hashing-1.0-SNAPSHOT.jar`.
+
+## Program Use
+You can run the executable JAR file using the standard Java command:
+`java -jar Hashing-1.0-SNAPSHOT.jar `
+
+The program is expecting a minimum of four parameters:
+
+```
+ -date,--privateDate <arg>         the private date (as MM/DD/YYYY)
+ -key,--privateKey <arg>           path to private key file
+ -patient,--patientFile <arg>      path to the file containing patient
+                                   data
+ -salt,--saltFile <arg>            path to encrypted salt file
+```
+
+There are additional optional parameters that you may also specify:
+
+```
+ -out,--outDirectory <arg>         the base directory to create output.
+                                   If not specified, will use the current
+                                   directory.
+ -delim,--delimiter <arg>          the delimiter used within the patient
+                                   data file
+ -unhashed,--writeUnhashed <arg>   write out the original unhashed data in
+                                   the result file (for debugging
+```

@@ -125,25 +125,14 @@ class ValidationFilterStepTest {
     row.put(Engine.PATIENT_ID_FIELD, "12345");
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
-    row.put(Engine.DATE_OF_BIRTH_FIELD, "12/12/1912");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "asdf");
+    // Yes, per our rules this is valid.  We're coding it this way to ensure that no SSN warning appears in the output
     row.put(Engine.SOCIAL_SECURITY_NUMBER, "333-3E-3333");
 
     ValidationFilterStep step = new ValidationFilterStep();
     row = step.checkFieldFormat(row);
-    assertEquals("The following fields are not in a valid format: Social Security Number (only allow numbers, dashes and spaces)",
+    assertEquals("The following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format)",
             row.getInvalidReason());
-
-    // We also make sure that things that may seem invalid are considered valid - this includes all whitespace or empty
-    // SSN entries.
-    row.setInvalidReason(null);
-    row.put(Engine.SOCIAL_SECURITY_NUMBER, "");
-    row = step.checkFieldFormat(row);
-    assertNull(row.getInvalidReason());
-
-    row.setInvalidReason(null);
-    row.put(Engine.SOCIAL_SECURITY_NUMBER, "    ");
-    row = step.checkFieldFormat(row);
-    assertNull(row.getInvalidReason());
   }
 
   @Test
@@ -156,6 +145,17 @@ class ValidationFilterStepTest {
     row.put(Engine.SOCIAL_SECURITY_NUMBER, "333-33-3333");
 
     ValidationFilterStep step = new ValidationFilterStep();
+    row = step.checkFieldFormat(row);
+    assertNull(row.getInvalidReason());
+
+    // Try different formats of date
+    row.setInvalidReason(null);
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "   1/17/1950   ");
+    row = step.checkFieldFormat(row);
+    assertNull(row.getInvalidReason());
+
+    row.setInvalidReason(null);
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "   19500117   ");
     row = step.checkFieldFormat(row);
     assertNull(row.getInvalidReason());
 
@@ -183,14 +183,14 @@ class ValidationFilterStepTest {
 
     ValidationFilterStep step = new ValidationFilterStep();
     row = step.run(row);
-    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format), Social Security Number (only allow numbers, dashes and spaces)",
+    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format)",
             row.getInvalidReason());
 
     row.setInvalidReason(null);
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
     row = step.run(row);
-    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format), Social Security Number (only allow numbers, dashes and spaces)",
+    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format)",
             row.getInvalidReason());
 
     row.setInvalidReason(null);
@@ -199,7 +199,7 @@ class ValidationFilterStepTest {
     row.put(Engine.LAST_NAME_FIELD, "B");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "12/12/asdf");
     row = step.run(row);
-    assertEquals("The following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format), Social Security Number (only allow numbers, dashes and spaces)",
+    assertEquals("The following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format)",
             row.getInvalidReason());
 
     row.setInvalidReason(null);

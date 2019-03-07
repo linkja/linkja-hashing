@@ -12,7 +12,6 @@ import java.util.Optional;
 
 public class ValidationFilterStep implements IStep {
   public static final int MIN_NAME_LENGTH = 2;
-  private static final String SSN_INVALID_CHARACTERS = ".*[^\\d\\- ].*";
   public static final DateTimeFormatter DATE_OF_BIRTH_FORMATTER = DateTimeFormatter.ofPattern(""
           + "[yyyy/M/d[ H:mm[:ss]]]"
           + "[yyyy-M-d[ H:mm[:ss]]]"
@@ -128,10 +127,6 @@ public class ValidationFilterStep implements IStep {
       formatBuilder.append("Date of Birth (recommended to use MM/DD/YYYY format), ");
       hasFormatError = true;
     }
-    if (row.containsKey(Engine.SOCIAL_SECURITY_NUMBER) && row.get(Engine.SOCIAL_SECURITY_NUMBER).trim().matches(SSN_INVALID_CHARACTERS)) {
-      formatBuilder.append("Social Security Number (only allow numbers, dashes and spaces), ");
-      hasFormatError = true;
-    }
 
     if (hasFormatError) {
       row.setInvalidReason(safeAppendInvalidReason(row, formatBuilder.toString()));
@@ -151,7 +146,7 @@ public class ValidationFilterStep implements IStep {
     }
 
     try {
-      LocalDate.parse(dateString, DATE_OF_BIRTH_FORMATTER);
+      LocalDate.parse(dateString.trim(), DATE_OF_BIRTH_FORMATTER);
       return true;
     }
     catch (DateTimeParseException exc) {

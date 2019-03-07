@@ -27,7 +27,7 @@ class HashingStepTest {
     row.put(Engine.LAST_NAME_FIELD, "DOE");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters);
     row = step.run(row);
@@ -44,7 +44,8 @@ class HashingStepTest {
     row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
     row.addCompletedStep(new ValidationFilterStep().getStepName());
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
     parameters.setPrivateDate(LocalDate.parse("2018-05-05"));
 
     HashingStep step = new HashingStep(parameters);
@@ -74,7 +75,8 @@ class HashingStepTest {
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
     row.addCompletedStep(new ValidationFilterStep().getStepName());
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
     parameters.setPrivateDate(LocalDate.parse("2018-05-05"));
 
     HashingStep step = new HashingStep(parameters);
@@ -102,7 +104,8 @@ class HashingStepTest {
     row.addDerivedRow(createRow("12345", "JON", "DOE", "1950-06-06", "5555", true));
     row.addDerivedRow(createRow("12345", "JON", "SMITH", "1950-06-06", "5555", true));
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
     parameters.setPrivateDate(LocalDate.parse("2018-05-05"));
 
     HashingStep step = new HashingStep(parameters);
@@ -135,20 +138,21 @@ class HashingStepTest {
 
   @Test
   // SQL Equivalent:
-  // SELECT dbo.fnHashBytes2(CONCAT('12345','3',datediff(dd,'1950-01-01','2000-01-01')),'0123456789123')  -- PIDHASH
+  // SELECT dbo.fnHashBytes2(CONCAT('12345','3',datediff(dd,'1950-01-01','2000-01-01')),'9876543210987')  -- PIDHASH
   void patientIDHash() {
     DataRow row = new DataRow();
     row.put(Engine.PATIENT_ID_FIELD, "12345");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-01-01");
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
     parameters.setSiteId("3");
     parameters.setPrivateDate(LocalDate.parse("2000-01-01"));
 
     HashingStep step = new HashingStep(parameters);
     step.cacheConvertedData(row);
     row = step.patientIDHash(row);
-    assertEquals("E17144CF797141987527A3AED983D20D39C77A43A4B002E46667AD09C5C577DB66B258432802997AAD56E021C589139DE358B47FB71FB37551F18EF44077B2D1",
+    assertEquals("B53A2F5B8F66C676E06BD99EE9B7F1569095B190C068B968A58E8DEC6126A3602B2CF898722E7C82F30A5E885E8140A9D43880DE15E443A7FC9041CCF2C96CFB",
             row.get(HashingStep.PIDHASH_FIELD));
   }
 
@@ -162,7 +166,8 @@ class HashingStepTest {
     row.put(Engine.LAST_NAME_FIELD, "DOE");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters);
     step.cacheConvertedData(row);
@@ -181,7 +186,8 @@ class HashingStepTest {
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
     row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters);
     step.cacheConvertedData(row);
@@ -200,7 +206,8 @@ class HashingStepTest {
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
     row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters);
     step.cacheConvertedData(row);
@@ -218,7 +225,8 @@ class HashingStepTest {
     row.put(Engine.LAST_NAME_FIELD, "DOE");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters);
     step.cacheConvertedData(row);
@@ -236,7 +244,8 @@ class HashingStepTest {
     row.put(Engine.LAST_NAME_FIELD, "DOE");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-12-15");
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters);
     step.cacheConvertedData(row);
@@ -255,7 +264,8 @@ class HashingStepTest {
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-12-15");
     row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters);
     step.cacheConvertedData(row);
@@ -274,7 +284,8 @@ class HashingStepTest {
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
     row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters);
     step.cacheConvertedData(row);
@@ -292,7 +303,8 @@ class HashingStepTest {
     row.put(Engine.LAST_NAME_FIELD, "DOUGH");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters);
     step.cacheConvertedData(row);
@@ -311,7 +323,8 @@ class HashingStepTest {
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
     row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters);
     step.cacheConvertedData(row);
@@ -330,7 +343,8 @@ class HashingStepTest {
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
     row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
     HashParameters parameters = new HashParameters();
-    parameters.setPrivateSalt("0123456789123");
+    parameters.setPrivateSalt("9876543210987");
+    parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters);
     step.cacheConvertedData(row);

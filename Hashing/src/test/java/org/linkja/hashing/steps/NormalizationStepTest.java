@@ -248,6 +248,9 @@ class NormalizationStepTest {
     assertEquals("", step.normalizeSSN("ABC"));
     assertEquals("", step.normalizeSSN("123"));
     assertEquals("", step.normalizeSSN("  123  "));
+    // Even though we can see this isn't a SSN, our logic is set up to extract the last 4 digits that exist.  We only have
+    // 3 digits, so it'll come back empty.
+    assertEquals("", step.normalizeSSN(" 56 South 7th Street "));
   }
 
   @Test
@@ -257,6 +260,8 @@ class NormalizationStepTest {
     assertEquals("6789", step.normalizeSSN("123456789"));
     assertEquals("6789", step.normalizeSSN("123 45 6789"));
     assertEquals("6789", step.normalizeSSN(" 1 2 3 4 5 6 7 8 9 "));
+    // Even though we can see this isn't a SSN, our logic is set up to extract the last 4 digits that exist
+    assertEquals("6789", step.normalizeSSN(" 5678 South 9th Street "));
   }
 
   @Test
