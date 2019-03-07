@@ -70,7 +70,7 @@ public class Engine {
       File file = new File(classLoader.getResource("configuration/canonical-header-names.csv").getFile());
       CSVParser parser = CSVParser.parse(file, Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader());
       for (CSVRecord csvRecord : parser) {
-        canonicalHeaderNames.put(csvRecord.get(0), csvRecord.get(1));
+        canonicalHeaderNames.put(csvRecord.get(0).trim().toLowerCase(), csvRecord.get(1).trim().toLowerCase());
       }
     }
 
@@ -106,7 +106,8 @@ public class Engine {
   public DataRow csvRecordToDataRow(CSVRecord csvRecord) {
     DataRow row = new DataRow();
     for (DataHeaderMapEntry entry : this.patientDataHeaderMap.getEntries()) {
-      row.put(entry.getCanonicalName(), csvRecord.get(entry.getOriginalName()));
+      row.put(entry.getCanonicalName() == null ? entry.getOriginalName() : entry.getCanonicalName(),
+              csvRecord.get(entry.getOriginalName()));
     }
     row.setRowNumber(csvRecord.getRecordNumber());
     return row;
@@ -123,7 +124,7 @@ public class Engine {
 
     CSVParser parser = CSVParser.parse(parameters.getPatientFile(), Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader().withDelimiter(this.parameters.getDelimiter()));
     Map<String, Integer> csvHeaderMap = parser.getHeaderMap();
-    this.patientDataHeaderMap.createFromCSVHeader(csvHeaderMap).mergeCanonicalHeaders(normalizeHeader(csvHeaderMap));
+    this.patientDataHeaderMap.createFromCSVHeader(csvHeaderMap).mergeCanonicalHeaders(this.canonicalHeaderNames);
     verifyFields();
 
     // Because our check for unique patient IDs requires knowing every ID that has been seen, and because our processing
@@ -148,14 +149,19 @@ public class Engine {
     int numThreads = this.parameters.getNumWorkerThreads();
     ArrayList<DataRow> batch = new ArrayList<DataRow>(batchSize);  // Pre-allocate the memory
     for (CSVRecord csvRecord : parser) {
-      String patientId = csvRecord.get(patientIdIndex);
-      if (uniquePatientIds.contains(patientId)) {
-        writer.close();
-        threadPool.shutdownNow();
-        throw new LinkjaException(String.format("Patient IDs must be unique within the data file.  A duplicate copy of Patient ID %s was found on row %d.",
-                patientId.trim(), csvRecord.getRecordNumber()));
+      String patientId = csvRecord.get(patientIdIndex).trim();
+      // If the patient ID is empty, we're not going to track it (that'd be a false error if there are multiple
+      // blank fields on different rows).  Note that we're not throwing out the record as invalid at this point.  We
+      // probably could, but we're delegating all of that work to our worker steps.
+      if (!patientId.equals("")) {
+        if (uniquePatientIds.contains(patientId)) {
+          writer.close();
+          threadPool.shutdownNow();
+          throw new LinkjaException(String.format("Patient IDs must be unique within the data file.  A duplicate copy of Patient ID %s was found on row %d.",
+                  patientId.trim(), csvRecord.getRecordNumber()));
+        }
+        uniquePatientIds.add(patientId);
       }
-      uniquePatientIds.add(patientId);
 
       // We want to get our CSV data into a format that we can better act on within the application.  Load it to the
       // data structure we created for this work.
@@ -292,6 +298,12 @@ public class Engine {
     }
   }
 
+  /**
+   * Write out a collection of DataRow results
+   * @param dataPrinter
+   * @param rows
+   * @throws IOException
+   */
   private void writeDataRowResults(CSVPrinter dataPrinter, List<DataRow> rows) throws IOException {
     if (rows == null) {
       return;
@@ -421,22 +433,6 @@ public class Engine {
       || !this.patientDataHeaderMap.containsCanonicalColumn(DATE_OF_BIRTH_FIELD)) {
       throw new LinkjaException(REQUIRED_COLUMNS_EXCEPTION_MESSAGE);
     }
-  }
-
-  /**
-   * Given the header entries for the CSV file, perform some quick normalization checks so that we can be a little
-   * flexible in what users are allowed to send in.  We will preserve any column even if it isn't in our lookup list.
-   * @param map
-   * @return
-   */
-  public static Map<String, Integer> normalizeHeader(Map<String, Integer> map) {
-    Map<String,Integer> normalizedMap = new HashMap<String, Integer>();
-    for (Map.Entry<String,Integer> entry : map.entrySet()) {
-      String csvField = entry.getKey();
-      String csvFieldLower = csvField.toLowerCase();
-      normalizedMap.put(canonicalHeaderNames.containsKey(csvFieldLower) ? canonicalHeaderNames.get(csvFieldLower) : csvField, entry.getValue());
-    }
-    return normalizedMap;
   }
 
   public EngineParameters getParameters() {

@@ -2,6 +2,10 @@ package org.linkja.hashing;
 
 import java.util.*;
 
+/**
+ * A specialized collection that tracks the original data header from our input data source, and provides a mapping to
+ * the appropriate canonical name.
+ */
 public class DataHeaderMap {
   private HashMap<Integer, DataHeaderMapEntry> entries;
 
@@ -26,18 +30,27 @@ public class DataHeaderMap {
     return this;
   }
 
-  public DataHeaderMap mergeCanonicalHeaders(Map<String, Integer> canonicalHeaders) throws LinkjaException {
+  /**
+   * Merge in the canonical header mapping so that all of our entries have a mapped canonical header (if one exists).
+   * @param canonicalHeaders
+   * @return
+   * @throws LinkjaException
+   */
+  public DataHeaderMap mergeCanonicalHeaders(Map<String, String> canonicalHeaders) throws LinkjaException {
     if (canonicalHeaders == null) {
       return this;
     }
 
-    for (Map.Entry<String, Integer> entry : canonicalHeaders.entrySet()) {
-      Integer index = entry.getValue();
-      if (!this.entries.containsKey(index)) {
-        throw new LinkjaException("We were unable to match up the CSV headers and the headers needed by the Hashing program.");
-      }
+    if (this.entries == null || this.entries.size() == 0) {
+      throw new LinkjaException("You must load the list of headers before merging in the canonical headers");
+    }
 
-      this.entries.get(index).setCanonicalName(entry.getKey());
+    for (Map.Entry<Integer, DataHeaderMapEntry> entry : this.entries.entrySet()) {
+      Integer index = entry.getKey();
+      String originalName = entry.getValue().getOriginalName().trim().toLowerCase();
+      if (canonicalHeaders.containsKey(originalName)) {
+        this.entries.get(index).setCanonicalName(canonicalHeaders.get(originalName));
+      }
     }
 
     return this;
@@ -54,6 +67,10 @@ public class DataHeaderMap {
     }
 
     for (DataHeaderMapEntry entry : this.entries.values()) {
+      if (entry.getCanonicalName() == null) {
+        continue;
+      }
+
       if (entry.getCanonicalName().equals(canonicalName)) {
         return entry.getHeaderIndex();
       }
