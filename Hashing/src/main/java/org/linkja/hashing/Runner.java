@@ -109,6 +109,7 @@ public class Runner {
       parameters.setRecordExceptionMode(parseRecordExceptionMode(prop.getProperty("recordExceptionMode")));
       parameters.setRunNormalizationStep(prop.getProperty("runNormalizationStep", Boolean.toString(EngineParameters.DEFAULT_RUN_NORMALIZATION_STEP)));
       parameters.setNumWorkerThreads(prop.getProperty("workerThreads", Integer.toString(EngineParameters.DEFAULT_WORKER_THREADS)));
+      parameters.setBatchSize(prop.getProperty("batchSize", Integer.toString(EngineParameters.DEFAULT_BATCH_SIZE)));
     }
     finally {
       if (inputStream != null) {

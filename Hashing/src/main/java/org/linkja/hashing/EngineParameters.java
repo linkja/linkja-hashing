@@ -18,10 +18,12 @@ public class EngineParameters {
   }
 
   public static final int MIN_NUM_WORKER_THREADS = 1;
+  public static final int MIN_BATCH_SIZE = 100;
 
   public static final char DEFAULT_DELIMITER = ',';
   public static final RecordExceptionMode DEFAULT_RECORD_EXCEPTION_MODE = RecordExceptionMode.NoExceptions;
   public static final int DEFAULT_WORKER_THREADS = 3;
+  public static final int DEFAULT_BATCH_SIZE = 1000;
   public static final boolean DEFAULT_RUN_NORMALIZATION_STEP = true;
   public static final boolean DEFAULT_WRITE_UNHASHED_DATA = false;
 
@@ -36,6 +38,7 @@ public class EngineParameters {
   private char delimiter = DEFAULT_DELIMITER;
   private RecordExceptionMode recordExceptionMode = DEFAULT_RECORD_EXCEPTION_MODE;
   private int numWorkerThreads = DEFAULT_WORKER_THREADS;
+  private int batchSize = DEFAULT_BATCH_SIZE;
   private boolean runNormalizationStep = DEFAULT_RUN_NORMALIZATION_STEP;
   private FileHelper fileHelper;
   private boolean writeUnhashedData = DEFAULT_WRITE_UNHASHED_DATA;
@@ -192,5 +195,20 @@ public class EngineParameters {
   public void setWriteUnhashedData(String writeUnhashedData) {
     this.writeUnhashedData = (writeUnhashedData == null) ?
             EngineParameters.DEFAULT_WRITE_UNHASHED_DATA : Boolean.parseBoolean(writeUnhashedData.trim());
+  }
+
+  public int getBatchSize() {
+    return batchSize;
+  }
+
+  public void setBatchSize(int batchSize) {
+    if (batchSize < MIN_BATCH_SIZE) {
+      throw new InvalidParameterException(String.format("The batch size must be >=%d", MIN_BATCH_SIZE));
+    }
+    this.batchSize = batchSize;
+  }
+
+  public void setBatchSize(String batchSize) {
+    setBatchSize(Integer.parseInt(batchSize.trim()));
   }
 }

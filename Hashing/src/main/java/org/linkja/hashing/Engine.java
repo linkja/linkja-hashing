@@ -44,6 +44,9 @@ public class Engine {
   private static ArrayList<String> suffixes = null;
   private static HashMap<String, String> genericNames = null;
 
+  private int numSubmittedJobs = 0;
+  private int numCompletedJobs = 0;
+
   private ArrayList<String> executionReport = new ArrayList<String>();
 
 
@@ -110,63 +113,12 @@ public class Engine {
   }
 
   /**
-   * Internal worker class to manage the actual engine
-   */
-  private static class EngineThread implements Callable<List<DataRow>> {
-    private List<DataRow> dataRows;
-    private boolean runNormalizationStep;
-    private EngineParameters.RecordExceptionMode exceptionMode;
-    private static ArrayList<String> prefixes = null;
-    private static ArrayList<String> suffixes = null;
-    private static HashMap<String, String> genericNames = null;
-    private static HashParameters hashParameters;
-
-    public EngineThread(List<DataRow> dataRows, boolean runNormalizationStep, EngineParameters.RecordExceptionMode exceptionMode,
-                        ArrayList<String> prefixes, ArrayList<String> suffixes, HashMap<String, String> genericNames,
-                        HashParameters hashParameters) {
-      this.dataRows = new ArrayList<DataRow>(dataRows);
-      this.runNormalizationStep = runNormalizationStep;
-      this.exceptionMode = exceptionMode;
-      this.prefixes = prefixes;
-      this.suffixes = suffixes;
-      this.genericNames = genericNames;
-      this.hashParameters = hashParameters;
-    }
-
-    @Override
-    public List<DataRow> call() throws Exception {
-      ArrayList<IStep> steps = new ArrayList<IStep>();
-      steps.add(new ValidationFilterStep());
-      // The user can configure the system to skip normalization, if they prefer to handle that externally
-      if (runNormalizationStep) {
-        steps.add(new NormalizationStep(this.prefixes, this.suffixes));
-      }
-      // If the user doesn't want exception flags, or has already created them, we are going to skip this step in
-      // the processing pipeline.
-      // TODO - If the user said they have already provided the exception flag, should we confirm that?
-      if (exceptionMode == EngineParameters.RecordExceptionMode.GenerateExceptions) {
-        steps.add(new ExceptionStep(this.genericNames));
-      }
-      steps.add(new PermuteStep());
-      steps.add(new HashingStep(this.hashParameters));
-
-      RecordProcessor processor = new RecordProcessor(steps);
-      List<DataRow> results = new ArrayList<DataRow>();
-      for (DataRow row : this.dataRows) {
-        results.add(processor.run(row));
-      }
-      //return processor.run(this.dataRow);
-      return results;
-    }
-  }
-
-  /**
    * Run the hashing pipeline, given the current configuration
    * @throws IOException
    * @throws URISyntaxException
    * @throws LinkjaException
    */
-  public void run() throws IOException, URISyntaxException, LinkjaException {
+  public void run() throws IOException, URISyntaxException, LinkjaException, InterruptedException {
     initialize();
 
     CSVParser parser = CSVParser.parse(parameters.getPatientFile(), Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader().withDelimiter(this.parameters.getDelimiter()));
@@ -174,70 +126,121 @@ public class Engine {
     this.patientDataHeaderMap.createFromCSVHeader(csvHeaderMap).mergeCanonicalHeaders(normalizeHeader(csvHeaderMap));
     verifyFields();
 
+    // Because our check for unique patient IDs requires knowing every ID that has been seen, and because our processing
+    // steps do not hold state, we are performing this check as we load up our worker queue.
     HashSet<String> uniquePatientIds = new HashSet<>();
     int patientIdIndex = this.patientDataHeaderMap.findIndexOfCanonicalName(PATIENT_ID_FIELD);
 
-    ExecutorService threadPool = Executors.newFixedThreadPool(parameters.getNumWorkerThreads());
+    // Build our thread pool and task queue - these are configured with a set number of threads (that the user can define),
+    // and will run such that that number of threads is the total amount of work we have queued up.
+    ExecutorService threadPool = new ThreadPoolExecutor(parameters.getNumWorkerThreads(), parameters.getNumWorkerThreads(),30,TimeUnit.MINUTES,
+            new ArrayBlockingQueue<Runnable>(parameters.getNumWorkerThreads()), new ThreadPoolExecutor.CallerRunsPolicy());
     ExecutorCompletionService<List<DataRow>> taskQueue = new ExecutorCompletionService<List<DataRow>>(threadPool);
 
-    // Because our check for unique patient IDs requires knowing every ID that has been seen, and because our processing
-    // steps do not hold state, we are performing this check as we load up our worker queue.
-    int numSubmittedJobs = 0;
-    final int BATCH_SIZE = 100000;
-    ArrayList<DataRow> batch = new ArrayList<DataRow>(BATCH_SIZE);
+    // Open up our output stream
+    BufferedWriter writer = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),"output.csv"));
+    CSVPrinter csvPrinter = createCSVPrinter(writer);
+
+    this.numSubmittedJobs = 0;
+    this.numCompletedJobs = 0;
+    int totalRows = 0;
+    int batchSize = this.parameters.getBatchSize();
+    int numThreads = this.parameters.getNumWorkerThreads();
+    ArrayList<DataRow> batch = new ArrayList<DataRow>(batchSize);  // Pre-allocate the memory
     for (CSVRecord csvRecord : parser) {
       String patientId = csvRecord.get(patientIdIndex);
       if (uniquePatientIds.contains(patientId)) {
+        writer.close();
         threadPool.shutdownNow();
-        throw new LinkjaException(String.format("Patient IDs must be unique within the data file.  A duplicate copy of Patient ID %s was found on row %ld.",
-                patientId, csvRecord.getRecordNumber()));
+        throw new LinkjaException(String.format("Patient IDs must be unique within the data file.  A duplicate copy of Patient ID %s was found on row %d.",
+                patientId.trim(), csvRecord.getRecordNumber()));
       }
       uniquePatientIds.add(patientId);
 
+      // We want to get our CSV data into a format that we can better act on within the application.  Load it to the
+      // data structure we created for this work.
       DataRow row = csvRecordToDataRow(csvRecord);
       batch.add(row);
+      totalRows++;
 
-      if (batch.size() == BATCH_SIZE) {
-        batch.trimToSize();
-        taskQueue.submit(new EngineThread(batch, this.parameters.isRunNormalizationStep(),
+      // Once we have a batch of work to do, create a new processing task.
+      if (batch.size() == batchSize) {
+        batch.trimToSize();  // Free up unused space
+        taskQueue.submit(new EngineWorkerThread(batch, this.parameters.isRunNormalizationStep(),
                 this.parameters.getRecordExceptionMode(), this.prefixes, this.suffixes, this.genericNames,
                 this.hashParameters));
-        batch.clear();
-        numSubmittedJobs++;
+        batch.clear();  // The worker thread has its copy, so we can clear ours out to start a new batch
+        this.numSubmittedJobs++;
+
+        System.out.printf("Loaded %d records for hashing\r\n", csvRecord.getRecordNumber());
+
+        // As we submit a new batch to be worked on, we will look to see if we're exceeding the number of threads we
+        // wanted to have running.  If so, we'll start clearing up results (if they are done) and writing them up, which
+        // will keep memory usage manageable.
+        while (((ThreadPoolExecutor) threadPool).getActiveCount() >= numThreads) {
+          if (!processPendingWork(taskQueue, csvPrinter)) {
+            // If there was a problem during the middle of the processing cycle, we have to stop work since we can't
+            // rely on our results.
+            threadPool.shutdownNow();
+            writer.close();
+            return;
+          }
+
+          // We will sleep briefly just so we're not churning waiting for work to finish.
+          Thread.sleep(500);
+        }
+
       }
     }
 
-    //System.gc();
-
+    // If we have a partial batch that was filled, make sure it gets submitted to the work queue
     if (batch.size() > 0) {
       batch.trimToSize();
-      taskQueue.submit(new EngineThread(batch, this.parameters.isRunNormalizationStep(),
+      taskQueue.submit(new EngineWorkerThread(batch, this.parameters.isRunNormalizationStep(),
               this.parameters.getRecordExceptionMode(), this.prefixes, this.suffixes, this.genericNames,
               this.hashParameters));
-      numSubmittedJobs++;
+      this.numSubmittedJobs++;
     }
 
-    BufferedWriter writer = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),"output.csv"));
-    CSVPrinter csvPrinter = createCSVPrinter(writer);
+    if (processPendingWork(taskQueue, csvPrinter)) {
+      executionReport.add(String.format("Completed hashing %d data rows", totalRows));
+    }
+
+    writer.close();
+    threadPool.shutdown();
+  }
+
+  /**
+   * Check our queue of submitted work tasks and process the completed rows (writing them to our putput CSV).
+   * @param taskQueue
+   * @param csvPrinter
+   * @return true if the work was processed, false if there was an error
+   */
+  private boolean processPendingWork(ExecutorCompletionService<List<DataRow>> taskQueue, CSVPrinter csvPrinter) {
     try {
-      for (int index = 0; index < numSubmittedJobs; index++) {
-        System.out.printf("Processing %d of %d\r\n", index+1, numSubmittedJobs);
-        Future<List<DataRow>> task = taskQueue.take();
+      // If we have completed all of the submitted jobs, we are all done.  If we have some outstanding, we are going to
+      // set a polling timeout.
+      if (this.numCompletedJobs == this.numSubmittedJobs) {
+        System.out.println("All jobs have been processed");
+        return true;
+      }
+
+      Future<List<DataRow>> task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
+      while (task != null) {
         writeDataRowResults(csvPrinter, task.get());
-        task = null;
+        this.numCompletedJobs++;
+        task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
       }
       csvPrinter.flush();
-
-      executionReport.add(String.format("Completed writing %d data rows", numSubmittedJobs));
     }
     catch (Exception exc) {
       executionReport.add("An exception was thrown while writing out the results.  The output file is incomplete and should not be used.");
       executionReport.add(exc.getMessage());
       exc.printStackTrace();
+      return false;
     }
 
-    writer.close();
-    threadPool.shutdown();
+    return true;
   }
 
   /**

@@ -169,6 +169,12 @@ class EngineParametersTest {
   }
 
   @Test
+  void setNumWorkerThreads_Default() {
+    EngineParameters parameters = new EngineParameters();
+    assertEquals(EngineParameters.DEFAULT_WORKER_THREADS, parameters.getNumWorkerThreads());
+  }
+
+  @Test
   void setNumWorkerThreads_Conversion() {
     EngineParameters parameters = new EngineParameters();
     parameters.setNumWorkerThreads("12");
@@ -185,6 +191,31 @@ class EngineParametersTest {
     assertThrows(InvalidParameterException.class, () -> parameters.setNumWorkerThreads("-1"));
     assertThrows(InvalidParameterException.class, () -> parameters.setNumWorkerThreads(0));
     assertThrows(InvalidParameterException.class, () -> parameters.setNumWorkerThreads(-1));
+  }
+
+  @Test
+  void setBatchSize_Default() {
+    EngineParameters parameters = new EngineParameters();
+    assertEquals(EngineParameters.DEFAULT_BATCH_SIZE, parameters.getBatchSize());
+  }
+
+  @Test
+  void setBatchSize_Conversion() {
+    EngineParameters parameters = new EngineParameters();
+    parameters.setBatchSize("1200");
+    assertEquals(1200, parameters.getBatchSize());
+    parameters.setBatchSize(" 130000000 ");
+    assertEquals(130000000, parameters.getBatchSize());
+  }
+
+  @Test
+  void setBatchSize_Invalid() {
+    EngineParameters parameters = new EngineParameters();
+    assertThrows(NumberFormatException.class, () -> parameters.setBatchSize("abc"));
+    assertThrows(InvalidParameterException.class, () -> parameters.setBatchSize("0"));
+    assertThrows(InvalidParameterException.class, () -> parameters.setBatchSize("-1"));
+    assertThrows(InvalidParameterException.class, () -> parameters.setBatchSize(0));
+    assertThrows(InvalidParameterException.class, () -> parameters.setBatchSize(-1));
   }
 
   @Test
