@@ -32,6 +32,10 @@ public class Engine {
   public static final String SITE_ID_FIELD = "siteid";
   public static final String PROJECT_ID_FIELD = "projectid";
 
+  // Special fields used for different types of output files
+  public static final String INVALID_DATA_ROW_NUMBER_FIELD = "row_number";
+  public static final String INVALID_DATA_ERROR_DESCRIPTION_FIELD = "error_description";
+
   private static final String REQUIRED_COLUMNS_EXCEPTION_MESSAGE = "We require, at a minimum, columns for patient ID, first name, last name, and date of birth.\r\n" +
           "If you have these columns present, please make sure that the column header is specified, and that the column names are in our list of " +
           "recognized values.  Please see the project README for more information.";
@@ -114,6 +118,27 @@ public class Engine {
   }
 
   /**
+   * Helper method to attempt closing all of our file writers
+   * @param hashWriter
+   * @param crosswalkWriter
+   * @param invalidDataWriter
+   * @throws IOException
+   */
+  private void closeWriters(BufferedWriter hashWriter, BufferedWriter crosswalkWriter, BufferedWriter invalidDataWriter) throws IOException {
+    if (hashWriter != null) {
+      hashWriter.close();
+    }
+
+    if (crosswalkWriter != null) {
+      crosswalkWriter.close();
+    }
+
+    if (invalidDataWriter != null) {
+      invalidDataWriter.close();
+    }
+  }
+
+  /**
    * Run the hashing pipeline, given the current configuration
    * @throws IOException
    * @throws URISyntaxException
@@ -138,9 +163,13 @@ public class Engine {
             new ArrayBlockingQueue<Runnable>(parameters.getNumWorkerThreads()), new ThreadPoolExecutor.CallerRunsPolicy());
     ExecutorCompletionService<List<DataRow>> taskQueue = new ExecutorCompletionService<List<DataRow>>(threadPool);
 
-    // Open up our output stream
-    BufferedWriter writer = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),"output.csv"));
-    CSVPrinter csvPrinter = createCSVPrinter(writer);
+    // Open up our output streams for hash results, crosswalks and invalid results
+    BufferedWriter hashWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),"hashing-output.csv"));
+    CSVPrinter hashPrinter = createHashPrinter(hashWriter);
+    BufferedWriter crosswalkWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),"DONOTSEND-crosswalk-output.csv"));
+    CSVPrinter crosswalkPrinter = createCrosswalkPrinter(crosswalkWriter);
+    BufferedWriter invalidDataWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),"DONOTSEND-invalid-data-output.csv"));
+    CSVPrinter invalidDataPrinter = createInvalidDataPrinter(invalidDataWriter);
 
     this.numSubmittedJobs = 0;
     this.numCompletedJobs = 0;
@@ -155,7 +184,7 @@ public class Engine {
       // probably could, but we're delegating all of that work to our worker steps.
       if (!patientId.equals("")) {
         if (uniquePatientIds.contains(patientId)) {
-          writer.close();
+          closeWriters(hashWriter, crosswalkWriter, invalidDataWriter);
           threadPool.shutdownNow();
           throw new LinkjaException(String.format("Patient IDs must be unique within the data file.  A duplicate copy of Patient ID %s was found on row %d.",
                   patientId.trim(), csvRecord.getRecordNumber()));
@@ -184,11 +213,11 @@ public class Engine {
         // wanted to have running.  If so, we'll start clearing up results (if they are done) and writing them up, which
         // will keep memory usage manageable.
         while (((ThreadPoolExecutor) threadPool).getActiveCount() >= numThreads) {
-          if (!processPendingWork(taskQueue, csvPrinter)) {
+          if (!processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter)) {
             // If there was a problem during the middle of the processing cycle, we have to stop work since we can't
             // rely on our results.
             threadPool.shutdownNow();
-            writer.close();
+            closeWriters(hashWriter, crosswalkWriter, invalidDataWriter);
             return;
           }
 
@@ -208,21 +237,24 @@ public class Engine {
       this.numSubmittedJobs++;
     }
 
-    if (processPendingWork(taskQueue, csvPrinter)) {
+    if (processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter)) {
       executionReport.add(String.format("Completed hashing %d data rows", totalRows));
     }
 
-    writer.close();
+    closeWriters(hashWriter, crosswalkWriter, invalidDataWriter);
     threadPool.shutdown();
   }
 
   /**
    * Check our queue of submitted work tasks and process the completed rows (writing them to our putput CSV).
    * @param taskQueue
-   * @param csvPrinter
+   * @param hashPrinter
+   * @param crosswalkPrinter
+   * @param invalidDataPrinter
    * @return true if the work was processed, false if there was an error
    */
-  private boolean processPendingWork(ExecutorCompletionService<List<DataRow>> taskQueue, CSVPrinter csvPrinter) {
+  private boolean processPendingWork(ExecutorCompletionService<List<DataRow>> taskQueue, CSVPrinter hashPrinter,
+                                     CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter) {
     try {
       // If we have completed all of the submitted jobs, we are all done.  If we have some outstanding, we are going to
       // set a polling timeout.
@@ -233,11 +265,11 @@ public class Engine {
 
       Future<List<DataRow>> task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
       while (task != null) {
-        writeDataRowResults(csvPrinter, task.get());
+        writeDataRowResults(task.get(), hashPrinter, crosswalkPrinter, invalidDataPrinter);
         this.numCompletedJobs++;
         task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
       }
-      csvPrinter.flush();
+      hashPrinter.flush();
     }
     catch (Exception exc) {
       executionReport.add("An exception was thrown while writing out the results.  The output file is incomplete and should not be used.");
@@ -256,7 +288,7 @@ public class Engine {
    * @return The instantiated CSVPrinter object
    * @throws IOException
    */
-  private CSVPrinter createCSVPrinter(BufferedWriter writer) throws IOException {
+  private CSVPrinter createHashPrinter(BufferedWriter writer) throws IOException {
     if (parameters.isWriteUnhashedData()) {
       return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
               Engine.SITE_ID_FIELD,
@@ -299,29 +331,67 @@ public class Engine {
   }
 
   /**
+   * Creates a CSVPrinter object to be used for creating our crosswalk data
+   * @param writer
+   * @return
+   * @throws IOException
+   */
+  private CSVPrinter createCrosswalkPrinter(BufferedWriter writer) throws IOException {
+    return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
+            Engine.PATIENT_ID_FIELD,
+            HashingStep.PIDHASH_FIELD));
+  }
+
+  /**
+   * Creates a CSVPrinter object to be used for creating our invalid data file
+   * @param writer
+   * @return
+   * @throws IOException
+   */
+  private CSVPrinter createInvalidDataPrinter(BufferedWriter writer) throws IOException {
+      return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
+              Engine.INVALID_DATA_ROW_NUMBER_FIELD,
+              Engine.PATIENT_ID_FIELD,
+              Engine.FIRST_NAME_FIELD,
+              Engine.LAST_NAME_FIELD,
+              Engine.DATE_OF_BIRTH_FIELD,
+              Engine.SOCIAL_SECURITY_NUMBER,
+              Engine.INVALID_DATA_ERROR_DESCRIPTION_FIELD));
+  }
+
+  /**
    * Write out a collection of DataRow results
-   * @param dataPrinter
+   * @param hashPrinter
+   * @param crosswalkPrinter
+   * @param invalidDataPrinter
    * @param rows
    * @throws IOException
    */
-  private void writeDataRowResults(CSVPrinter dataPrinter, List<DataRow> rows) throws IOException {
+  private void writeDataRowResults(List<DataRow> rows, CSVPrinter hashPrinter,
+                                   CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter) throws IOException {
     if (rows == null) {
       return;
     }
 
     for (DataRow row : rows) {
-      writeDataRowResult(dataPrinter, row);
+      writeDataRowResult(row, hashPrinter, crosswalkPrinter, invalidDataPrinter);
     }
-    dataPrinter.flush();
+
+    hashPrinter.flush();
+    crosswalkPrinter.flush();
+    invalidDataPrinter.flush();
   }
 
   /**
    * Utility method to write out the appropriate columns for a data row.
-   * @param dataPrinter
+   * @param hashPrinter
+   * @param crosswalkPrinter
+   * @param invalidDataPrinter
    * @param row
    * @throws IOException
    */
-  private void writeDataRowResult(CSVPrinter dataPrinter, DataRow row) throws IOException {
+  private void writeDataRowResult(DataRow row, CSVPrinter hashPrinter,
+                                  CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter) throws IOException {
     if (row == null) {
       return;
     }
@@ -330,8 +400,9 @@ public class Engine {
     // potentially misleading during the matching phase, so we choose instead to not provide output for SSN-related hashes.
     boolean hasSsn = !(row.get(Engine.SOCIAL_SECURITY_NUMBER) == null || row.get(Engine.SOCIAL_SECURITY_NUMBER).equals(""));
     if (row.shouldProcess()) {
+      crosswalkPrinter.printRecord(row.get(Engine.PATIENT_ID_FIELD), row.get(HashingStep.PIDHASH_FIELD));
       if (parameters.isWriteUnhashedData()) {
-        dataPrinter.printRecord(
+        hashPrinter.printRecord(
                 this.hashParameters.getSiteId(),
                 this.hashParameters.getProjectId(),
                 row.get(Engine.PATIENT_ID_FIELD),
@@ -354,7 +425,7 @@ public class Engine {
         );
       }
       else {
-        dataPrinter.printRecord(
+        hashPrinter.printRecord(
                 this.hashParameters.getSiteId(),
                 this.hashParameters.getProjectId(),
                 row.get(HashingStep.PIDHASH_FIELD),
@@ -375,13 +446,19 @@ public class Engine {
       // Process all derived rows as well
       if (row.hasDerivedRows()) {
         for (DataRow derivedRow : row.getDerivedRows()) {
-          writeDataRowResult(dataPrinter, derivedRow);
+          writeDataRowResult(derivedRow, hashPrinter, crosswalkPrinter, invalidDataPrinter);
         }
       }
     }
     else {
-      System.out.printf("INVALID ROW: row number %d\r\n", row.getRowNumber());
-      dumpRow(row);
+      invalidDataPrinter.printRecord(
+              row.getRowNumber(),
+              row.get(Engine.PATIENT_ID_FIELD),
+              row.get(Engine.FIRST_NAME_FIELD),
+              row.get(Engine.LAST_NAME_FIELD),
+              row.get(Engine.DATE_OF_BIRTH_FIELD),
+              hasSsn ? row.get(Engine.SOCIAL_SECURITY_NUMBER) : "",
+              row.getInvalidReason().replaceAll("\r\n", "|"));
     }
   }
 
