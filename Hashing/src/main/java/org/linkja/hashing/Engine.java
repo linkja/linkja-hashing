@@ -14,6 +14,8 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -52,6 +54,8 @@ public class Engine {
   private int numCompletedJobs = 0;
 
   private ArrayList<String> executionReport = new ArrayList<String>();
+
+  private DateTimeFormatter fileTimestampFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
 
   public Engine(EngineParameters parameters, HashParameters hashParameters) {
@@ -164,11 +168,15 @@ public class Engine {
     ExecutorCompletionService<List<DataRow>> taskQueue = new ExecutorCompletionService<List<DataRow>>(threadPool);
 
     // Open up our output streams for hash results, crosswalks and invalid results
-    BufferedWriter hashWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),"hashing-output.csv"));
+    String fileTimestamp = LocalDateTime.now().format(fileTimestampFormatter);
+    BufferedWriter hashWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),
+            String.format("hashes_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp)));
     CSVPrinter hashPrinter = createHashPrinter(hashWriter);
-    BufferedWriter crosswalkWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),"DONOTSEND-crosswalk-output.csv"));
+    BufferedWriter crosswalkWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),
+            String.format("DONOTSEND_crosswalk_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp)));
     CSVPrinter crosswalkPrinter = createCrosswalkPrinter(crosswalkWriter);
-    BufferedWriter invalidDataWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),"DONOTSEND-invalid-data-output.csv"));
+    BufferedWriter invalidDataWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),
+            String.format("DONOTSEND_invaliddata_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp)));
     CSVPrinter invalidDataPrinter = createInvalidDataPrinter(invalidDataWriter);
 
     this.numSubmittedJobs = 0;
