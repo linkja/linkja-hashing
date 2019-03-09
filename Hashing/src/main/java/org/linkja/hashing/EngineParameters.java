@@ -19,6 +19,7 @@ public class EngineParameters {
 
   public static final int MIN_NUM_WORKER_THREADS = 1;
   public static final int MIN_BATCH_SIZE = 100;
+  public static final int MIN_SALT_LENGTH = 1;
 
   public static final char DEFAULT_DELIMITER = ',';
   public static final RecordExceptionMode DEFAULT_RECORD_EXCEPTION_MODE = RecordExceptionMode.NoExceptions;
@@ -26,9 +27,9 @@ public class EngineParameters {
   public static final int DEFAULT_BATCH_SIZE = 1000;
   public static final boolean DEFAULT_RUN_NORMALIZATION_STEP = true;
   public static final boolean DEFAULT_WRITE_UNHASHED_DATA = false;
+  public static final int DEFAULT_MIN_SALT_LENGTH = 13;
 
   public static final DateTimeFormatter PrivateDateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-  //private static final SimpleDateFormat PrivateDateFormatter = new SimpleDateFormat("MM/dd/yyyy");
 
   private File privateKeyFile;
   private File saltFile;
@@ -42,6 +43,7 @@ public class EngineParameters {
   private boolean runNormalizationStep = DEFAULT_RUN_NORMALIZATION_STEP;
   private FileHelper fileHelper;
   private boolean writeUnhashedData = DEFAULT_WRITE_UNHASHED_DATA;
+  private int minSaltLength = DEFAULT_MIN_SALT_LENGTH;
 
   public EngineParameters() {
     fileHelper = new FileHelper();
@@ -168,7 +170,7 @@ public class EngineParameters {
   }
 
   public void setNumWorkerThreads(String numWorkerThreads) {
-    setNumWorkerThreads(Integer.parseInt(numWorkerThreads.trim()));
+    setNumWorkerThreads((numWorkerThreads == null) ? -1 : Integer.parseInt(numWorkerThreads.trim()));
   }
 
   public boolean isRunNormalizationStep() {
@@ -209,6 +211,21 @@ public class EngineParameters {
   }
 
   public void setBatchSize(String batchSize) {
-    setBatchSize(Integer.parseInt(batchSize.trim()));
+    setBatchSize((batchSize == null) ? -1 : Integer.parseInt(batchSize.trim()));
+  }
+
+  public int getMinSaltLength() {
+    return minSaltLength;
+  }
+
+  public void setMinSaltLength(int minSaltLength) {
+    if (minSaltLength < MIN_SALT_LENGTH) {
+      throw new InvalidParameterException(String.format("The minimum allowable salt length must be >=%d", MIN_SALT_LENGTH));
+    }
+    this.minSaltLength = minSaltLength;
+  }
+
+  public void setMinSaltLength(String minSaltLength) {
+    setMinSaltLength((minSaltLength == null) ? -1 : Integer.parseInt(minSaltLength.trim()));
   }
 }

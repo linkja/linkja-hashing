@@ -191,6 +191,7 @@ class EngineParametersTest {
     assertThrows(InvalidParameterException.class, () -> parameters.setNumWorkerThreads("-1"));
     assertThrows(InvalidParameterException.class, () -> parameters.setNumWorkerThreads(0));
     assertThrows(InvalidParameterException.class, () -> parameters.setNumWorkerThreads(-1));
+    assertThrows(InvalidParameterException.class, () -> parameters.setNumWorkerThreads(null));
   }
 
   @Test
@@ -216,6 +217,7 @@ class EngineParametersTest {
     assertThrows(InvalidParameterException.class, () -> parameters.setBatchSize("-1"));
     assertThrows(InvalidParameterException.class, () -> parameters.setBatchSize(0));
     assertThrows(InvalidParameterException.class, () -> parameters.setBatchSize(-1));
+    assertThrows(InvalidParameterException.class, () -> parameters.setBatchSize(null));
   }
 
   @Test
@@ -272,5 +274,31 @@ class EngineParametersTest {
     // This is the way boolean conversions work in Java - if it's not "true", it's false
     parameters.setWriteUnhashedData("blah");
     assertFalse(parameters.isWriteUnhashedData());
+  }
+
+  @Test
+  void setMinSaltLength_Default() {
+    EngineParameters parameters = new EngineParameters();
+    assertEquals(EngineParameters.DEFAULT_MIN_SALT_LENGTH, parameters.getMinSaltLength());
+  }
+
+  @Test
+  void setMinSaltLength_Conversion() {
+    EngineParameters parameters = new EngineParameters();
+    parameters.setMinSaltLength("10");
+    assertEquals(10, parameters.getMinSaltLength());
+    parameters.setMinSaltLength(" 12 ");
+    assertEquals(12, parameters.getMinSaltLength());
+  }
+
+  @Test
+  void setMinSaltLength_Invalid() {
+    EngineParameters parameters = new EngineParameters();
+    assertThrows(NumberFormatException.class, () -> parameters.setMinSaltLength("abc"));
+    assertThrows(InvalidParameterException.class, () -> parameters.setMinSaltLength("0"));
+    assertThrows(InvalidParameterException.class, () -> parameters.setMinSaltLength("-1"));
+    assertThrows(InvalidParameterException.class, () -> parameters.setMinSaltLength(0));
+    assertThrows(InvalidParameterException.class, () -> parameters.setMinSaltLength(-1));
+    assertThrows(InvalidParameterException.class, () -> parameters.setMinSaltLength(null));
   }
 }

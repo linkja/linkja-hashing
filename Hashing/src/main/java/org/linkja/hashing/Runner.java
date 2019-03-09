@@ -59,7 +59,7 @@ public class Runner {
 
     HashParameters hashParameters = null;
     try {
-      hashParameters = parseProjectSalt(parameters.getSaltFile(), parameters.getPrivateKeyFile());
+      hashParameters = parseProjectSalt(parameters.getSaltFile(), parameters.getPrivateKeyFile(), parameters.getMinSaltLength());
       hashParameters.setPrivateDate(parameters.getPrivateDate());  // Provide a copy to our hashing parameters collection
     }
     catch (Exception exc) {
@@ -110,6 +110,7 @@ public class Runner {
       parameters.setRunNormalizationStep(prop.getProperty("runNormalizationStep", Boolean.toString(EngineParameters.DEFAULT_RUN_NORMALIZATION_STEP)));
       parameters.setNumWorkerThreads(prop.getProperty("workerThreads", Integer.toString(EngineParameters.DEFAULT_WORKER_THREADS)));
       parameters.setBatchSize(prop.getProperty("batchSize", Integer.toString(EngineParameters.DEFAULT_BATCH_SIZE)));
+      parameters.setMinSaltLength(prop.getProperty("minSaltLength", Integer.toString(EngineParameters.DEFAULT_MIN_SALT_LENGTH)));
     }
     finally {
       if (inputStream != null) {
@@ -222,7 +223,7 @@ public class Runner {
    * @return
    * @throws Exception
    */
-  public static HashParameters parseProjectSalt(File saltFile, File decryptKey) throws Exception {
+  public static HashParameters parseProjectSalt(File saltFile, File decryptKey, int minSaltLength) throws Exception {
     Security.addProvider(new BouncyCastleProvider());
     BufferedReader reader = new BufferedReader(new FileReader(decryptKey));
     PEMParser parser = new PEMParser(reader);
@@ -246,6 +247,15 @@ public class Runner {
     parameters.setPrivateSalt(saltParts[2]);
     parameters.setProjectSalt(saltParts[3]);
     parameters.setProjectId(saltParts[4]);
+
+    if (parameters.getProjectSalt().length() < minSaltLength) {
+      throw new LinkjaException(String.format("The project salt must be at least %d characters long, but the one provided is %d",
+              minSaltLength, parameters.getProjectSalt().length()));
+    }
+    if (parameters.getPrivateSalt().length() < minSaltLength) {
+      throw new LinkjaException(String.format("The private (site-specific) salt must be at least %d characters long, but the one provided is %d",
+              minSaltLength, parameters.getPrivateSalt().length()));
+    }
 
     return parameters;
   }
