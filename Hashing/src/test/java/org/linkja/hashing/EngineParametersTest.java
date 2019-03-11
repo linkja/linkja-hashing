@@ -26,11 +26,12 @@ class EngineParametersTest {
     EngineParameters parameters = new EngineParameters(fileHelperMock);
     File file = new File("/test/path/assumed/valid");
     parameters.setPrivateKeyFile(file);
-    assertEquals(parameters.getPrivateKeyFile().getPath(), file.getPath());
+    assertEquals(file.getPath(), parameters.getPrivateKeyFile().getPath());
 
-    String filePath = "/test/path/assumed/valid";
+    // Test with string parameter
+    String filePath = file.getPath();
     parameters.setPrivateKeyFile(filePath);
-    assertEquals(parameters.getPrivateKeyFile().getPath(), filePath);
+    assertEquals(filePath, parameters.getPrivateKeyFile().getPath());
   }
 
   @Test
@@ -54,11 +55,12 @@ class EngineParametersTest {
     EngineParameters parameters = new EngineParameters(fileHelperMock);
     File file = new File("/test/path/assumed/valid");
     parameters.setSaltFile(file);
-    assertEquals(parameters.getSaltFile().getPath(), file.getPath());
+    assertEquals(file.getPath(), parameters.getSaltFile().getPath());
 
-    String filePath = "/test/path/assumed/valid";
+    // Test with string parameter
+    String filePath = file.getPath();
     parameters.setSaltFile(filePath);
-    assertEquals(parameters.getSaltFile().getPath(), filePath);
+    assertEquals(filePath, parameters.getSaltFile().getPath());
   }
 
   @Test
@@ -82,11 +84,12 @@ class EngineParametersTest {
     EngineParameters parameters = new EngineParameters(fileHelperMock);
     File file = new File("/test/path/assumed/valid");
     parameters.setPatientFile(file);
-    assertEquals(parameters.getPatientFile().getPath(), file.getPath());
+    assertEquals(file.getPath(), parameters.getPatientFile().getPath());
 
-    String filePath = "/test/path/assumed/valid";
+    // Test with string parameter
+    String filePath = file.getPath();
     parameters.setPatientFile(filePath);
-    assertEquals(parameters.getPatientFile().getPath(), filePath);
+    assertEquals(filePath, parameters.getPatientFile().getPath());
   }
 
   @Test
@@ -128,7 +131,7 @@ class EngineParametersTest {
 
     EngineParameters parameters = new EngineParameters(fileHelperMock);
     parameters.setOutputDirectory(path);
-    assertEquals(parameters.getOutputDirectory().toString(), path);
+    assertEquals(Paths.get(path).toString(), parameters.getOutputDirectory().toString());
   }
 
   @Test
