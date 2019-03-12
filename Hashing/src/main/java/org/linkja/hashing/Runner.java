@@ -47,7 +47,8 @@ public class Runner {
       parameters = loadConfig(parameters);
       String outputDirectory = cmd.getOptionValue("outDirectory");
       if (outputDirectory == null || outputDirectory.equals("")) {
-        Path path = FileSystems.getDefault().getPath(".").toAbsolutePath();
+        Path path = FileSystems.getDefault().getPath("").toAbsolutePath();
+        System.out.printf("Results will be written to %s\r\n", path.toString());
         outputDirectory = path.toString();
       }
       parameters.setOutputDirectory(outputDirectory);
