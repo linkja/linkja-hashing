@@ -6,9 +6,7 @@ import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.linkja.hashing.steps.*;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -18,6 +16,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public class Engine {
   public static final int MIN_NUM_FIELDS = 4;
@@ -72,36 +71,39 @@ public class Engine {
    * @throws LinkjaException
    */
   public void initialize() throws IOException, URISyntaxException, LinkjaException {
-    ClassLoader classLoader = getClass().getClassLoader();
     if (this.canonicalHeaderNames == null) {
-      canonicalHeaderNames = new HashMap<String, String>();
-      File file = new File(classLoader.getResource("configuration/canonical-header-names.csv").getFile());
-      CSVParser parser = CSVParser.parse(file, Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader());
-      for (CSVRecord csvRecord : parser) {
-        canonicalHeaderNames.put(csvRecord.get(0).trim().toLowerCase(), csvRecord.get(1).trim().toLowerCase());
+      this.canonicalHeaderNames = new HashMap<String, String>();
+      try (InputStream csvStream = getClass().getResourceAsStream("/configuration/canonical-header-names.csv")) {
+        CSVParser parser = CSVParser.parse(csvStream, Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader());
+        for (CSVRecord csvRecord : parser) {
+          this.canonicalHeaderNames.put(csvRecord.get(0).trim().toLowerCase(), csvRecord.get(1).trim().toLowerCase());
+        }
       }
     }
 
     if (this.prefixes == null) {
       this.prefixes = new ArrayList<String>();
-      Path path = Paths.get(classLoader.getResource("configuration/prefixes.txt").toURI());
-      prefixes.addAll(Files.readAllLines(path));
+      try (BufferedReader buffer = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/configuration/prefixes.txt")))) {
+        this.prefixes.addAll(buffer.lines().collect(Collectors.toList()));
+      }
     }
 
     if (this.suffixes == null) {
       this.suffixes = new ArrayList<String>();
-      Path path = Paths.get(classLoader.getResource("configuration/suffixes.txt").toURI());
-      suffixes.addAll(Files.readAllLines(path));
+      try (BufferedReader buffer = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/configuration/suffixes.txt")))) {
+        this.suffixes.addAll(buffer.lines().collect(Collectors.toList()));
+      }
     }
 
     if (this.genericNames == null) {
       this.genericNames = new HashMap<String, String>();
-      File file = new File(classLoader.getResource("configuration/generic-names.csv").getFile());
-      CSVParser parser = CSVParser.parse(file, Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader());
-      for (CSVRecord csvRecord : parser) {
-        String name = csvRecord.get(0);
-        String match = csvRecord.get(1);
-        ExceptionStep.addMatchRuleToCollection(name, match, csvRecord.getRecordNumber(), this.genericNames);
+      try (InputStream csvStream = getClass().getResourceAsStream("/configuration/generic-names.csv")) {
+        CSVParser parser = CSVParser.parse(csvStream, Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader());
+        for (CSVRecord csvRecord : parser) {
+          String name = csvRecord.get(0);
+          String match = csvRecord.get(1);
+          ExceptionStep.addMatchRuleToCollection(name, match, csvRecord.getRecordNumber(), this.genericNames);
+        }
       }
     }
   }
