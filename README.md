@@ -21,30 +21,31 @@ linkja-hashing was built using Java JDK 1.8 (specifically [OpenJDK](https://open
 
 `mvn clean package`
 
-This will compile the code, run all unit tests, and create an executable JAR file under the .\target folder with all dependency JARs included.  The JAR will be named something like `Hashing-1.0-SNAPSHOT.jar`.
+This will compile the code, run all unit tests, and create an executable JAR file under the .\target folder with all dependency JARs included.  The JAR will be named something like `Hashing-1.0-jar-with-dependencies.jar`.
 
 ## Program Use
 You can run the executable JAR file using the standard Java command:
-`java -jar Hashing-1.0-SNAPSHOT.jar `
+`java -jar Hashing-1.0-jar-with-dependencies.jar `
 
 The program is expecting a minimum of four parameters:
 
 ```
- -date,--privateDate <arg>         the private date (as MM/DD/YYYY)
- -key,--privateKey <arg>           path to private key file
- -patient,--patientFile <arg>      path to the file containing patient
+ -date,--privateDate <arg>         The private date (as MM/DD/YYYY)
+ -key,--privateKey <arg>           Path to private key file
+ -patient,--patientFile <arg>      Path to the file containing patient
                                    data
- -salt,--saltFile <arg>            path to encrypted salt file
+ -salt,--saltFile <arg>            Path to encrypted salt file
 ```
 
 There are additional optional parameters that you may also specify:
 
 ```
- -out,--outDirectory <arg>         the base directory to create output.
-                                   If not specified, will use the current
-                                   directory.
- -delim,--delimiter <arg>          the delimiter used within the patient
-                                   data file
- -unhashed,--writeUnhashed <arg>   write out the original unhashed data in
-                                   the result file (for debugging
+ -out,--outDirectory <arg>                  The base directory to create output.
+                                            If not specified, will use the current
+                                            directory.
+ -delim,--delimiter <arg>                   The delimiter used within the patient
+                                            data file. Uses a comman "," by default.
+ -unhashed,--writeUnhashed <true | false>   write out the original unhashed data in
+                                            the result file (for debugging). false by
+                                            default.
 ```
