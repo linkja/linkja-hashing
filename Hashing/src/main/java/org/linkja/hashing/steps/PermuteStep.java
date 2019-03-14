@@ -69,11 +69,17 @@ public class PermuteStep implements IStep {
     DataRow firstPartRow = (DataRow)row.clone();
     DataRow lastPartRow = (DataRow)row.clone();
 
+    // Before adding each name part, make sure we only include them if it's at least as long as our minimum required
+    // name.  This will allow "D C" as a last name, but "D" and "C" would not be derived last names.
     firstPartRow.put(Engine.LAST_NAME_FIELD, removeUnwantedCharacters(firstPart));
-    row.addDerivedRow(firstPartRow);
+    if (firstPartRow.get(Engine.LAST_NAME_FIELD).length() >= Engine.MIN_NAME_LENGTH) {
+      row.addDerivedRow(firstPartRow);
+    }
 
     lastPartRow.put(Engine.LAST_NAME_FIELD, removeUnwantedCharacters(lastPart));
-    row.addDerivedRow(lastPartRow);
+    if (lastPartRow.get(Engine.LAST_NAME_FIELD).length() >= Engine.MIN_NAME_LENGTH) {
+      row.addDerivedRow(lastPartRow);
+    }
 
     row.put(Engine.LAST_NAME_FIELD, removeUnwantedCharacters(lastName));
 

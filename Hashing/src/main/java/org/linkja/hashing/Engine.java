@@ -10,7 +10,6 @@ import java.io.*;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -20,6 +19,9 @@ import java.util.stream.Collectors;
 
 public class Engine {
   public static final int MIN_NUM_FIELDS = 4;
+
+  // Global rules that may be needed across multiple processing steps
+  public static final int MIN_NAME_LENGTH = 2;
 
   // List the canonical names for anticipated fields
   public static final String PATIENT_ID_FIELD = "patient_id";

@@ -57,6 +57,52 @@ class PermuteStepTest {
   }
 
   @Test
+  void permuteLastName_TwoNamesTooShort() {
+    PermuteStep step = new PermuteStep();
+    String expectedOriginalLastName = "DC";
+    for (String delimiter : DELIMITERS) {
+      DataRow row = new DataRow();
+      row.put(Engine.LAST_NAME_FIELD, String.format("D%sC", delimiter));
+      row = step.permuteLastName(row);
+      assertEquals(expectedOriginalLastName, row.get(Engine.LAST_NAME_FIELD));
+
+      // Because the individual components of the name are too short (1 character each), they shouldn't be included
+      // as derived rows.
+      assertFalse(row.hasDerivedRows());
+    }
+  }
+
+  @Test
+  void permuteLastName_TwoNamesFirstTooShort() {
+    PermuteStep step = new PermuteStep();
+    String expectedOriginalLastName = "FSECOND";
+    for (String delimiter : DELIMITERS) {
+      DataRow row = new DataRow();
+      row.put(Engine.LAST_NAME_FIELD, String.format("F%sSECOND", delimiter));
+      row = step.permuteLastName(row);
+      assertEquals(expectedOriginalLastName, row.get(Engine.LAST_NAME_FIELD));
+      ArrayList<DataRow> derivedRows = row.getDerivedRows();
+      assertEquals(1, derivedRows.size());
+      assertEquals("SECOND", derivedRows.get(0).get(Engine.LAST_NAME_FIELD));
+    }
+  }
+
+  @Test
+  void permuteLastName_TwoNamesSecondTooShort() {
+    PermuteStep step = new PermuteStep();
+    String expectedOriginalLastName = "FIRSTS";
+    for (String delimiter : DELIMITERS) {
+      DataRow row = new DataRow();
+      row.put(Engine.LAST_NAME_FIELD, String.format("FIRST%sS", delimiter));
+      row = step.permuteLastName(row);
+      assertEquals(expectedOriginalLastName, row.get(Engine.LAST_NAME_FIELD));
+      ArrayList<DataRow> derivedRows = row.getDerivedRows();
+      assertEquals(1, derivedRows.size());
+      assertEquals("FIRST", derivedRows.get(0).get(Engine.LAST_NAME_FIELD));
+    }
+  }
+
+  @Test
   void permuteLastName_SeveralNames() {
     PermuteStep step = new PermuteStep();
     for (String delimiter : DELIMITERS) {
