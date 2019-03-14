@@ -309,16 +309,18 @@ public class Engine {
               Engine.DATE_OF_BIRTH_FIELD,
               Engine.SOCIAL_SECURITY_NUMBER,
               HashingStep.PIDHASH_FIELD,
-              HashingStep.FNAMELNAMEDOBSSN_FIELD,
-              HashingStep.FNAMELNAMEDOB_FIELD,
-              HashingStep.LNAMEFNAMEDOBSSN_FIELD,
-              HashingStep.LNAMEFNAMEDOB_FIELD,
-              HashingStep.FNAMELNAMETDOBSSN_FIELD,
-              HashingStep.FNAMELNAMETDOB_FIELD,
-              HashingStep.FNAME3LNAMEDOBSSN_FIELD,
-              HashingStep.FNAME3LNAMEDOB_FIELD,
-              HashingStep.FNAMELNAMEDOBDSSN_FIELD,
-              HashingStep.FNAMELNAMEDOBYSSN_FIELD,
+              // We need to generalize the labels for these hashes, so they don't disclose to an attacker additional
+              // information about their composition.  Comments show the actual field each is mapped to.
+              "hash1",  // HashingStep.FNAMELNAMEDOBSSN_FIELD
+              "hash2",  // HashingStep.FNAMELNAMEDOBSSN_FIELD
+              "hash3",  // HashingStep.LNAMEFNAMEDOBSSN_FIELD
+              "hash4",  // HashingStep.LNAMEFNAMEDOB_FIELD
+              "hash5",  // HashingStep.FNAMELNAMETDOBSSN_FIELD
+              "hash6",  // HashingStep.FNAMELNAMETDOB_FIELD
+              "hash7",  // HashingStep.FNAME3LNAMEDOBSSN_FIELD
+              "hash8",  // HashingStep.FNAME3LNAMEDOB_FIELD
+              "hash9",  // HashingStep.FNAMELNAMEDOBDSSN_FIELD
+              "hash10", // HashingStep.FNAMELNAMEDOBYSSN_FIELD
               Engine.EXCEPTION_FLAG));
     }
     else {
@@ -326,16 +328,18 @@ public class Engine {
               Engine.SITE_ID_FIELD,
               Engine.PROJECT_ID_FIELD,
               HashingStep.PIDHASH_FIELD,
-              HashingStep.FNAMELNAMEDOBSSN_FIELD,
-              HashingStep.FNAMELNAMEDOB_FIELD,
-              HashingStep.LNAMEFNAMEDOBSSN_FIELD,
-              HashingStep.LNAMEFNAMEDOB_FIELD,
-              HashingStep.FNAMELNAMETDOBSSN_FIELD,
-              HashingStep.FNAMELNAMETDOB_FIELD,
-              HashingStep.FNAME3LNAMEDOBSSN_FIELD,
-              HashingStep.FNAME3LNAMEDOB_FIELD,
-              HashingStep.FNAMELNAMEDOBDSSN_FIELD,
-              HashingStep.FNAMELNAMEDOBYSSN_FIELD,
+              // We need to generalize the labels for these hashes, so they don't disclose to an attacker additional
+              // information about their composition.  Comments show the actual field each is mapped to.
+              "hash1",  // HashingStep.FNAMELNAMEDOBSSN_FIELD
+              "hash2",  // HashingStep.FNAMELNAMEDOBSSN_FIELD
+              "hash3",  // HashingStep.LNAMEFNAMEDOBSSN_FIELD
+              "hash4",  // HashingStep.LNAMEFNAMEDOB_FIELD
+              "hash5",  // HashingStep.FNAMELNAMETDOBSSN_FIELD
+              "hash6",  // HashingStep.FNAMELNAMETDOB_FIELD
+              "hash7",  // HashingStep.FNAME3LNAMEDOBSSN_FIELD
+              "hash8",  // HashingStep.FNAME3LNAMEDOB_FIELD
+              "hash9",  // HashingStep.FNAMELNAMEDOBDSSN_FIELD
+              "hash10", // HashingStep.FNAMELNAMEDOBYSSN_FIELD
               Engine.EXCEPTION_FLAG));
     }
   }
