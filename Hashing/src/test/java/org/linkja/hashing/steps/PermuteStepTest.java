@@ -57,6 +57,21 @@ class PermuteStepTest {
   }
 
   @Test
+  void permuteLastName_TwoNamesSame() {
+    PermuteStep step = new PermuteStep();
+    String expectedOriginalLastName = "SMITHSMITH";
+    for (String delimiter : DELIMITERS) {
+      DataRow row = new DataRow();
+      row.put(Engine.LAST_NAME_FIELD, String.format("SMITH%sSMITH", delimiter));
+      row = step.permuteLastName(row);
+      assertEquals(expectedOriginalLastName, row.get(Engine.LAST_NAME_FIELD));
+      ArrayList<DataRow> derivedRows = row.getDerivedRows();
+      assertEquals(1, derivedRows.size());
+      assertEquals("SMITH", derivedRows.get(0).get(Engine.LAST_NAME_FIELD));
+    }
+  }
+
+  @Test
   void permuteLastName_TwoNamesTooShort() {
     PermuteStep step = new PermuteStep();
     String expectedOriginalLastName = "DC";
