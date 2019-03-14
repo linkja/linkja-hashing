@@ -61,19 +61,28 @@ public class PermuteStep implements IStep {
 
     // For now, we will only pull the first and last name parts, regardless of how
     // many there are.  This may be expanded in the future to handle more parts.
-    String firstPart = lastNameParts[0];
-    String lastPart = lastNameParts[lastNameParts.length - 1];
+    String firstPart = removeUnwantedCharacters(lastNameParts[0]);
+    String lastPart = removeUnwantedCharacters(lastNameParts[lastNameParts.length - 1]);
 
     // Clone the existing row (before we make any changes), for each of our new
     // name parts
     DataRow firstPartRow = (DataRow)row.clone();
     DataRow lastPartRow = (DataRow)row.clone();
 
-    firstPartRow.put(Engine.LAST_NAME_FIELD, removeUnwantedCharacters(firstPart));
-    row.addDerivedRow(firstPartRow);
+    // Before adding each name part, make sure we only include them if it's at least as long as our minimum required
+    // name.  This will allow "D C" as a last name, but "D" and "C" would not be derived last names.
+    firstPartRow.put(Engine.LAST_NAME_FIELD, firstPart);
+    if (firstPartRow.get(Engine.LAST_NAME_FIELD).length() >= Engine.MIN_NAME_LENGTH) {
+      row.addDerivedRow(firstPartRow);
+    }
 
-    lastPartRow.put(Engine.LAST_NAME_FIELD, removeUnwantedCharacters(lastPart));
-    row.addDerivedRow(lastPartRow);
+    // For the 2nd part of the split name, make sure it isn't an exact match of the first (e.g., SMITH SMITH).  We
+    // only want distinct permutations of the last name.
+    lastPartRow.put(Engine.LAST_NAME_FIELD, lastPart);
+    if (lastPartRow.get(Engine.LAST_NAME_FIELD).length() >= Engine.MIN_NAME_LENGTH
+    && !firstPart.equals(lastPart)) {
+      row.addDerivedRow(lastPartRow);
+    }
 
     row.put(Engine.LAST_NAME_FIELD, removeUnwantedCharacters(lastName));
 

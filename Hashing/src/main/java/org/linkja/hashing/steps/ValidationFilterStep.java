@@ -11,7 +11,6 @@ import java.time.format.DateTimeParseException;
 import java.util.Optional;
 
 public class ValidationFilterStep implements IStep {
-  public static final int MIN_NAME_LENGTH = 2;
   public static final DateTimeFormatter DATE_OF_BIRTH_FORMATTER = DateTimeFormatter.ofPattern(""
           + "[yyyy/M/d[ H:mm[:ss]]]"
           + "[yyyy-M-d[ H:mm[:ss]]]"
@@ -94,11 +93,11 @@ public class ValidationFilterStep implements IStep {
     boolean hasLengthError = false;
     StringBuilder lengthBuilder = new StringBuilder();
     lengthBuilder.append("The following fields must be longer than 1 character: ");
-    if (row.containsKey(Engine.FIRST_NAME_FIELD) && row.get(Engine.FIRST_NAME_FIELD).trim().length() < MIN_NAME_LENGTH) {
+    if (row.containsKey(Engine.FIRST_NAME_FIELD) && row.get(Engine.FIRST_NAME_FIELD).trim().length() < Engine.MIN_NAME_LENGTH) {
       lengthBuilder.append("First Name, ");
       hasLengthError = true;
     }
-    if (row.containsKey(Engine.LAST_NAME_FIELD) && row.get(Engine.LAST_NAME_FIELD).trim().length() < MIN_NAME_LENGTH) {
+    if (row.containsKey(Engine.LAST_NAME_FIELD) && row.get(Engine.LAST_NAME_FIELD).trim().length() < Engine.MIN_NAME_LENGTH) {
       lengthBuilder.append("Last Name, ");
       hasLengthError = true;
     }

@@ -119,10 +119,12 @@ class HashingStepTest {
       assertNotNulLOrEmpty(derivedRow.get(HashingStep.LNAMEFNAMEDOB_FIELD));
       assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAMELNAMETDOBSSN_FIELD));
       assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAMELNAMETDOB_FIELD));
-      assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD));
-      assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAME3LNAMEDOB_FIELD));
       assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAMELNAMEDOBDSSN_FIELD));
       assertNotNulLOrEmpty(derivedRow.get(HashingStep.FNAMELNAMEDOBYSSN_FIELD));
+
+      // Derived rows should not have the substring hash calculated
+      assertNull(derivedRow.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD));
+      assertNull(derivedRow.get(HashingStep.FNAME3LNAMEDOB_FIELD));
     }
   }
 

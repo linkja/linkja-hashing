@@ -10,7 +10,6 @@ import java.io.*;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -20,6 +19,9 @@ import java.util.stream.Collectors;
 
 public class Engine {
   public static final int MIN_NUM_FIELDS = 4;
+
+  // Global rules that may be needed across multiple processing steps
+  public static final int MIN_NAME_LENGTH = 2;
 
   // List the canonical names for anticipated fields
   public static final String PATIENT_ID_FIELD = "patient_id";
@@ -130,7 +132,7 @@ public class Engine {
    * @param invalidDataWriter
    * @throws IOException
    */
-  private void closeWriters(BufferedWriter hashWriter, BufferedWriter crosswalkWriter, BufferedWriter invalidDataWriter) throws IOException {
+  private void closeWriters(BufferedWriter hashWriter, BufferedWriter crosswalkWriter, BufferedWriter invalidDataWriter, BufferedWriter combinedHashedUnhashedWriter) throws IOException {
     if (hashWriter != null) {
       hashWriter.close();
     }
@@ -141,6 +143,10 @@ public class Engine {
 
     if (invalidDataWriter != null) {
       invalidDataWriter.close();
+    }
+
+    if (combinedHashedUnhashedWriter != null) {
+      combinedHashedUnhashedWriter.close();
     }
   }
 
@@ -169,7 +175,8 @@ public class Engine {
             new ArrayBlockingQueue<Runnable>(parameters.getNumWorkerThreads()), new ThreadPoolExecutor.CallerRunsPolicy());
     ExecutorCompletionService<List<DataRow>> taskQueue = new ExecutorCompletionService<List<DataRow>>(threadPool);
 
-    // Open up our output streams for hash results, crosswalks and invalid results
+    // Open up our output streams for hash results, crosswalks and invalid results.  We may have an optional 4th file
+    // for a file mixing hashes and PHI.
     String fileTimestamp = LocalDateTime.now().format(fileTimestampFormatter);
     BufferedWriter hashWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),
             String.format("hashes_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp)));
@@ -180,6 +187,14 @@ public class Engine {
     BufferedWriter invalidDataWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),
             String.format("DONOTSEND_invaliddata_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp)));
     CSVPrinter invalidDataPrinter = createInvalidDataPrinter(invalidDataWriter);
+    BufferedWriter combinedHashedUnhashedWriter = null;
+    CSVPrinter combinedHashedUnhashedPrinter = null;
+
+    if (parameters.isWriteUnhashedData()) {
+      combinedHashedUnhashedWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),
+              String.format("DONOTSEND_reviewonly_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp)));
+      combinedHashedUnhashedPrinter = createCombinedHashedUnhashedPrinter(combinedHashedUnhashedWriter);
+    }
 
     this.numSubmittedJobs = 0;
     this.numCompletedJobs = 0;
@@ -194,7 +209,7 @@ public class Engine {
       // probably could, but we're delegating all of that work to our worker steps.
       if (!patientId.equals("")) {
         if (uniquePatientIds.contains(patientId)) {
-          closeWriters(hashWriter, crosswalkWriter, invalidDataWriter);
+          closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
           threadPool.shutdownNow();
           throw new LinkjaException(String.format("Patient IDs must be unique within the data file.  A duplicate copy of Patient ID %s was found on row %d.",
                   patientId.trim(), csvRecord.getRecordNumber()));
@@ -223,11 +238,11 @@ public class Engine {
         // wanted to have running.  If so, we'll start clearing up results (if they are done) and writing them up, which
         // will keep memory usage manageable.
         while (((ThreadPoolExecutor) threadPool).getActiveCount() >= numThreads) {
-          if (!processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter)) {
+          if (!processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter)) {
             // If there was a problem during the middle of the processing cycle, we have to stop work since we can't
             // rely on our results.
             threadPool.shutdownNow();
-            closeWriters(hashWriter, crosswalkWriter, invalidDataWriter);
+            closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
             return;
           }
 
@@ -247,11 +262,11 @@ public class Engine {
       this.numSubmittedJobs++;
     }
 
-    if (processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter)) {
+    if (processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter)) {
       executionReport.add(String.format("Completed hashing %d data rows", totalRows));
     }
 
-    closeWriters(hashWriter, crosswalkWriter, invalidDataWriter);
+    closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
     threadPool.shutdown();
   }
 
@@ -264,7 +279,7 @@ public class Engine {
    * @return true if the work was processed, false if there was an error
    */
   private boolean processPendingWork(ExecutorCompletionService<List<DataRow>> taskQueue, CSVPrinter hashPrinter,
-                                     CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter) {
+                                     CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter, CSVPrinter combinedHashedUnhashedPrinter) {
     try {
       // If we have completed all of the submitted jobs, we are all done.  If we have some outstanding, we are going to
       // set a polling timeout.
@@ -275,7 +290,7 @@ public class Engine {
 
       Future<List<DataRow>> task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
       while (task != null) {
-        writeDataRowResults(task.get(), hashPrinter, crosswalkPrinter, invalidDataPrinter);
+        writeDataRowResults(task.get(), hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter);
         this.numCompletedJobs++;
         task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
       }
@@ -299,45 +314,48 @@ public class Engine {
    * @throws IOException
    */
   private CSVPrinter createHashPrinter(BufferedWriter writer) throws IOException {
-    if (parameters.isWriteUnhashedData()) {
-      return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
-              Engine.SITE_ID_FIELD,
-              Engine.PROJECT_ID_FIELD,
-              Engine.PATIENT_ID_FIELD,
-              Engine.FIRST_NAME_FIELD,
-              Engine.LAST_NAME_FIELD,
-              Engine.DATE_OF_BIRTH_FIELD,
-              Engine.SOCIAL_SECURITY_NUMBER,
-              HashingStep.PIDHASH_FIELD,
-              HashingStep.FNAMELNAMEDOBSSN_FIELD,
-              HashingStep.FNAMELNAMEDOB_FIELD,
-              HashingStep.LNAMEFNAMEDOBSSN_FIELD,
-              HashingStep.LNAMEFNAMEDOB_FIELD,
-              HashingStep.FNAMELNAMETDOBSSN_FIELD,
-              HashingStep.FNAMELNAMETDOB_FIELD,
-              HashingStep.FNAME3LNAMEDOBSSN_FIELD,
-              HashingStep.FNAME3LNAMEDOB_FIELD,
-              HashingStep.FNAMELNAMEDOBDSSN_FIELD,
-              HashingStep.FNAMELNAMEDOBYSSN_FIELD,
-              Engine.EXCEPTION_FLAG));
-    }
-    else {
-      return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
-              Engine.SITE_ID_FIELD,
-              Engine.PROJECT_ID_FIELD,
-              HashingStep.PIDHASH_FIELD,
-              HashingStep.FNAMELNAMEDOBSSN_FIELD,
-              HashingStep.FNAMELNAMEDOB_FIELD,
-              HashingStep.LNAMEFNAMEDOBSSN_FIELD,
-              HashingStep.LNAMEFNAMEDOB_FIELD,
-              HashingStep.FNAMELNAMETDOBSSN_FIELD,
-              HashingStep.FNAMELNAMETDOB_FIELD,
-              HashingStep.FNAME3LNAMEDOBSSN_FIELD,
-              HashingStep.FNAME3LNAMEDOB_FIELD,
-              HashingStep.FNAMELNAMEDOBDSSN_FIELD,
-              HashingStep.FNAMELNAMEDOBYSSN_FIELD,
-              Engine.EXCEPTION_FLAG));
-    }
+    return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
+            Engine.SITE_ID_FIELD,
+            Engine.PROJECT_ID_FIELD,
+            HashingStep.PIDHASH_FIELD,
+            // We need to generalize the labels for these hashes, so they don't disclose to an attacker additional
+            // information about their composition.  Comments show the actual field each is mapped to.
+            "hash1",  // HashingStep.FNAMELNAMEDOBSSN_FIELD
+            "hash2",  // HashingStep.FNAMELNAMEDOBSSN_FIELD
+            "hash3",  // HashingStep.LNAMEFNAMEDOBSSN_FIELD
+            "hash4",  // HashingStep.LNAMEFNAMEDOB_FIELD
+            "hash5",  // HashingStep.FNAMELNAMETDOBSSN_FIELD
+            "hash6",  // HashingStep.FNAMELNAMETDOB_FIELD
+            "hash7",  // HashingStep.FNAME3LNAMEDOBSSN_FIELD
+            "hash8",  // HashingStep.FNAME3LNAMEDOB_FIELD
+            "hash9",  // HashingStep.FNAMELNAMEDOBDSSN_FIELD
+            "hash10", // HashingStep.FNAMELNAMEDOBYSSN_FIELD
+            Engine.EXCEPTION_FLAG));
+  }
+
+  private CSVPrinter createCombinedHashedUnhashedPrinter(BufferedWriter writer) throws IOException {
+    return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
+            Engine.SITE_ID_FIELD,
+            Engine.PROJECT_ID_FIELD,
+            Engine.PATIENT_ID_FIELD,
+            Engine.FIRST_NAME_FIELD,
+            Engine.LAST_NAME_FIELD,
+            Engine.DATE_OF_BIRTH_FIELD,
+            Engine.SOCIAL_SECURITY_NUMBER,
+            HashingStep.PIDHASH_FIELD,
+            // We need to generalize the labels for these hashes, so they don't disclose to an attacker additional
+            // information about their composition.  Comments show the actual field each is mapped to.
+            "hash1",  // HashingStep.FNAMELNAMEDOBSSN_FIELD
+            "hash2",  // HashingStep.FNAMELNAMEDOBSSN_FIELD
+            "hash3",  // HashingStep.LNAMEFNAMEDOBSSN_FIELD
+            "hash4",  // HashingStep.LNAMEFNAMEDOB_FIELD
+            "hash5",  // HashingStep.FNAMELNAMETDOBSSN_FIELD
+            "hash6",  // HashingStep.FNAMELNAMETDOB_FIELD
+            "hash7",  // HashingStep.FNAME3LNAMEDOBSSN_FIELD
+            "hash8",  // HashingStep.FNAME3LNAMEDOB_FIELD
+            "hash9",  // HashingStep.FNAMELNAMEDOBDSSN_FIELD
+            "hash10", // HashingStep.FNAMELNAMEDOBYSSN_FIELD
+            Engine.EXCEPTION_FLAG));
   }
 
   /**
@@ -378,18 +396,21 @@ public class Engine {
    * @throws IOException
    */
   private void writeDataRowResults(List<DataRow> rows, CSVPrinter hashPrinter,
-                                   CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter) throws IOException {
+                                   CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter, CSVPrinter combinedHashedUnhashedPrinter) throws IOException {
     if (rows == null) {
       return;
     }
 
     for (DataRow row : rows) {
-      writeDataRowResult(row, hashPrinter, crosswalkPrinter, invalidDataPrinter);
+      writeDataRowResult(row, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter);
     }
 
     hashPrinter.flush();
     crosswalkPrinter.flush();
     invalidDataPrinter.flush();
+    if (combinedHashedUnhashedPrinter != null) {
+      combinedHashedUnhashedPrinter.flush();
+    }
   }
 
   /**
@@ -401,7 +422,7 @@ public class Engine {
    * @throws IOException
    */
   private void writeDataRowResult(DataRow row, CSVPrinter hashPrinter,
-                                  CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter) throws IOException {
+                                  CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter, CSVPrinter combinedHashedUnhashedPrinter) throws IOException {
     if (row == null) {
       return;
     }
@@ -411,8 +432,26 @@ public class Engine {
     boolean hasSsn = !(row.get(Engine.SOCIAL_SECURITY_NUMBER) == null || row.get(Engine.SOCIAL_SECURITY_NUMBER).equals(""));
     if (row.shouldProcess()) {
       crosswalkPrinter.printRecord(row.get(Engine.PATIENT_ID_FIELD), row.get(HashingStep.PIDHASH_FIELD));
+
+      hashPrinter.printRecord(
+              this.hashParameters.getSiteId(),
+              this.hashParameters.getProjectId(),
+              row.get(HashingStep.PIDHASH_FIELD),
+              hasSsn ? row.get(HashingStep.FNAMELNAMEDOBSSN_FIELD) : "",
+              row.get(HashingStep.FNAMELNAMEDOB_FIELD),
+              hasSsn ? row.get(HashingStep.LNAMEFNAMEDOBSSN_FIELD) : "",
+              row.get(HashingStep.LNAMEFNAMEDOB_FIELD),
+              hasSsn ? row.get(HashingStep.FNAMELNAMETDOBSSN_FIELD) : "",
+              row.get(HashingStep.FNAMELNAMETDOB_FIELD),
+              hasSsn ? row.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD) : "",
+              row.get(HashingStep.FNAME3LNAMEDOB_FIELD),
+              hasSsn ? row.get(HashingStep.FNAMELNAMEDOBDSSN_FIELD) : "",
+              hasSsn ? row.get(HashingStep.FNAMELNAMEDOBYSSN_FIELD) : "",
+              row.isException() ? "1" : "0"
+      );
+
       if (parameters.isWriteUnhashedData()) {
-        hashPrinter.printRecord(
+        combinedHashedUnhashedPrinter.printRecord(
                 this.hashParameters.getSiteId(),
                 this.hashParameters.getProjectId(),
                 row.get(Engine.PATIENT_ID_FIELD),
@@ -434,29 +473,11 @@ public class Engine {
                 row.isException() ? "1" : "0"
         );
       }
-      else {
-        hashPrinter.printRecord(
-                this.hashParameters.getSiteId(),
-                this.hashParameters.getProjectId(),
-                row.get(HashingStep.PIDHASH_FIELD),
-                hasSsn ? row.get(HashingStep.FNAMELNAMEDOBSSN_FIELD) : "",
-                row.get(HashingStep.FNAMELNAMEDOB_FIELD),
-                hasSsn ? row.get(HashingStep.LNAMEFNAMEDOBSSN_FIELD) : "",
-                row.get(HashingStep.LNAMEFNAMEDOB_FIELD),
-                hasSsn ? row.get(HashingStep.FNAMELNAMETDOBSSN_FIELD) : "",
-                row.get(HashingStep.FNAMELNAMETDOB_FIELD),
-                hasSsn ? row.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD) : "",
-                row.get(HashingStep.FNAME3LNAMEDOB_FIELD),
-                hasSsn ? row.get(HashingStep.FNAMELNAMEDOBDSSN_FIELD) : "",
-                hasSsn ? row.get(HashingStep.FNAMELNAMEDOBYSSN_FIELD) : "",
-                row.isException() ? "1" : "0"
-        );
-      }
 
       // Process all derived rows as well
       if (row.hasDerivedRows()) {
         for (DataRow derivedRow : row.getDerivedRows()) {
-          writeDataRowResult(derivedRow, hashPrinter, crosswalkPrinter, invalidDataPrinter);
+          writeDataRowResult(derivedRow, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter);
         }
       }
     }
