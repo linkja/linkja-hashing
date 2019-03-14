@@ -36,6 +36,63 @@ public class HashingStep implements IStep {
 
   @Override
   public DataRow run(DataRow row) {
+    return calculateHashes(row, false);
+//    if (row == null || !row.shouldProcess()) {
+//      return row;
+//    }
+//    row.addCompletedStep(this.getStepName());
+//
+//    if (!row.hasCompletedStep(ValidationFilterStep.class.getSimpleName())) {
+//      row.setInvalidReason("The processing pipeline requires the Validation Filter to be run before Hashing.");
+//      return row;
+//    }
+//
+//    cacheConvertedData(row);
+//
+//    if (!row.shouldProcess()) {
+//      return row;
+//    }
+//
+//    // We allow ourselves to assume the presence and correct format of all required fields at this point.
+//    row = patientIDHash(row);
+//    row = fnamelnamedobHash(row);
+//    row = lnamefnamedobHash(row);
+//    row = fnamelnameTdobHash(row);
+//    row = fname3lnamedobHash(row);
+//
+//    // Only perform SSN hashes when SSN is set
+//    if (row.containsKey(Engine.SOCIAL_SECURITY_NUMBER) && row.get(Engine.SOCIAL_SECURITY_NUMBER).length() > 0) {
+//      row = fnamelnamedobssnHash(row);
+//      row = lnamefnamedobssnHash(row);
+//      row = fnamelnamedobssnHash(row);
+//      row = fnamelnameTdobssnHash(row);
+//      row = fname3lnamedobssnHash(row);
+//      row = fnamelnamedobDssnHash(row);
+//      row = fnamelnamedobYssnHash(row);
+//    }
+//
+//    // Process all of our derived rows
+//    if (row.hasDerivedRows()) {
+//      for (DataRow derivedRow : row.getDerivedRows()) {
+//        try {
+//          row.updateDerivedRow(derivedRow, run(derivedRow));
+//        } catch (Exception e) {
+//          row.setInvalidReason(String.format("An exception was caught when trying to update a derived row. %s", e.getMessage()));
+//        }
+//      }
+//    }
+//
+//    return row;
+  }
+
+  /**
+   * Internal worker method to calculate all of the hashes.  Pulled out of the run() method because we need the extra
+   * parameter to flag if this is a derived row or not.
+   * @param row
+   * @param isDerivedRow
+   * @return
+   */
+  private DataRow calculateHashes(DataRow row, boolean isDerivedRow) {
     if (row == null || !row.shouldProcess()) {
       return row;
     }
@@ -57,7 +114,9 @@ public class HashingStep implements IStep {
     row = fnamelnamedobHash(row);
     row = lnamefnamedobHash(row);
     row = fnamelnameTdobHash(row);
-    row = fname3lnamedobHash(row);
+    if (!isDerivedRow) {
+      row = fname3lnamedobHash(row);
+    }
 
     // Only perform SSN hashes when SSN is set
     if (row.containsKey(Engine.SOCIAL_SECURITY_NUMBER) && row.get(Engine.SOCIAL_SECURITY_NUMBER).length() > 0) {
@@ -65,7 +124,9 @@ public class HashingStep implements IStep {
       row = lnamefnamedobssnHash(row);
       row = fnamelnamedobssnHash(row);
       row = fnamelnameTdobssnHash(row);
-      row = fname3lnamedobssnHash(row);
+      if (!isDerivedRow) {
+        row = fname3lnamedobssnHash(row);
+      }
       row = fnamelnamedobDssnHash(row);
       row = fnamelnamedobYssnHash(row);
     }
@@ -74,7 +135,7 @@ public class HashingStep implements IStep {
     if (row.hasDerivedRows()) {
       for (DataRow derivedRow : row.getDerivedRows()) {
         try {
-          row.updateDerivedRow(derivedRow, run(derivedRow));
+          row.updateDerivedRow(derivedRow, calculateHashes(derivedRow, true));
         } catch (Exception e) {
           row.setInvalidReason(String.format("An exception was caught when trying to update a derived row. %s", e.getMessage()));
         }
