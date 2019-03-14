@@ -114,6 +114,8 @@ class NormalizationStepTest {
     assertEquals("MRSMITH", step.removePrefixes("MRSMITH"));
     assertEquals("MR.SMITH", step.removePrefixes("MR.SMITH"));
     assertEquals("MISSUNDERSTOOD", step.removePrefixes("MISSUNDERSTOOD"));
+    assertEquals("DRAYTON", step.removePrefixes("DRAYTON"));
+    assertEquals("MISS", step.removePrefixes("MISS"));
   }
 
   @Test
