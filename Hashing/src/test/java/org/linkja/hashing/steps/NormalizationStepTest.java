@@ -17,6 +17,7 @@ class NormalizationStepTest {
     add("MRS. ");
     add("MR. ");
     add("MR.-");
+    add("MR ");
   }};
 
   private static ArrayList<String> suffixes = new ArrayList<String>() {{
@@ -84,20 +85,22 @@ class NormalizationStepTest {
   @Test
   void removeUnwantedCharacters_NullEmpty() {
     NormalizationStep step = new NormalizationStep(prefixes, suffixes);
-    assertNull(step.removeUnwantedCharacters(null));
-    assertEquals("", step.removeUnwantedCharacters(""));
+    assertNull(step.removeUnwantedCharacters(null, true));
+    assertEquals("", step.removeUnwantedCharacters("", true));
   }
 
   @Test
   void removeUnwantedCharacters_Replacements() {
     NormalizationStep step = new NormalizationStep(prefixes, suffixes);
-    assertEquals("a B c", step.removeUnwantedCharacters(" a B c 1 2 3 . \" -"));
+    assertEquals("a B c", step.removeUnwantedCharacters(" a B c 1 2 3 . \" -", true));
+    assertEquals("aBc", step.removeUnwantedCharacters(" a B c 1 2 3 . \" -", false));
   }
 
   @Test
   void removeUnwantedCharacters_NoReplacements() {
     NormalizationStep step = new NormalizationStep(prefixes, suffixes);
-    assertEquals("ABC onetwothree", step.removeUnwantedCharacters("ABC onetwothree"));
+    assertEquals("ABC onetwothree", step.removeUnwantedCharacters("ABC onetwothree", true));
+    assertEquals("ABConetwothree", step.removeUnwantedCharacters("ABConetwothree", false));
   }
 
   @Test
@@ -218,6 +221,14 @@ class NormalizationStepTest {
     row = step.run(row);
     assertEquals("JOHN", row.get(Engine.FIRST_NAME_FIELD));
     row.put(Engine.FIRST_NAME_FIELD, "MR. JOHN 17");
+    row = step.run(row);
+    assertEquals("JOHN", row.get(Engine.FIRST_NAME_FIELD));
+
+
+    row.put(Engine.FIRST_NAME_FIELD, "JOHN PAUL");
+    row = step.run(row);
+    assertEquals("JOHNPAUL", row.get(Engine.FIRST_NAME_FIELD));
+    row.put(Engine.FIRST_NAME_FIELD, "MR JOHN-V");
     row = step.run(row);
     assertEquals("JOHN", row.get(Engine.FIRST_NAME_FIELD));
   }
