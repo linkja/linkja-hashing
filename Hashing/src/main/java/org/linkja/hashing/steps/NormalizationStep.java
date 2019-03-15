@@ -47,13 +47,21 @@ public class NormalizationStep implements IStep {
       String fieldValue = normalizeString(entry.getValue());
       // TODO - Determine if we need to make our processing more dynamic.
       // For now we will assume just the first and last name canonical fields get processed
-      if (fieldName.equals(Engine.FIRST_NAME_FIELD) || fieldName.equals(Engine.LAST_NAME_FIELD)) {
+      if (fieldName.equals(Engine.FIRST_NAME_FIELD)) {
         // Note that these functions are nested in a particular order to meet some input and output assumptions.
         // We need extra separators removed before we can remove prefixes and suffixes.  Once that is done, we
         // can safely remove remaining unwanted characters (e.g. because '.' is invalid, but is needed for prefix
         // detection).
         row.put(fieldName, removeUnwantedCharacters(
-                removeSuffixes(removePrefixes(removeExtraSeparators(fieldValue)))));
+                removeSuffixes(removePrefixes(removeExtraSeparators(fieldValue))), false));
+      }
+      else if (fieldName.equals(Engine.LAST_NAME_FIELD)) {
+        // Note that these functions are nested in a particular order to meet some input and output assumptions.
+        // We need extra separators removed before we can remove prefixes and suffixes.  Once that is done, we
+        // can safely remove remaining unwanted characters (e.g. because '.' is invalid, but is needed for prefix
+        // detection).
+        row.put(fieldName, removeUnwantedCharacters(
+                removeSuffixes(removePrefixes(removeExtraSeparators(fieldValue))), true));
       }
       else if (fieldName.equals(Engine.SOCIAL_SECURITY_NUMBER)) {
         row.put(fieldName, normalizeString(normalizeSSN(fieldValue)));
@@ -81,7 +89,14 @@ public class NormalizationStep implements IStep {
    * After other processing steps have been completed, this specifies the characters to remove (which is defined as the
    * opposite of the characters we want to keep).
    */
-  private static final String INVALID_CHARACTERS_PATTERN = "[^A-Za-z ]";
+  private static final String UNWANTED_CHARACTERS_PATTERN = "[^A-Za-z]";
+
+
+  /**
+   * After other processing steps have been completed, this specifies the characters to remove (which is defined as the
+   * opposite of the characters we want to keep).
+   */
+  private static final String UNWANTED_CHARACTERS_WITH_SPACES_PATTERN = "[^A-Za-z ]";
 
   /**
    * String normalization steps include:
@@ -121,12 +136,12 @@ public class NormalizationStep implements IStep {
    * @param data The string to remove unwanted characters from
    * @return An updated string (trimmed), or null if the input is null
    */
-  public String removeUnwantedCharacters(String data) {
+  public String removeUnwantedCharacters(String data, boolean allowSpaces) {
     if (data == null) {
       return null;
     }
 
-    return data.replaceAll(INVALID_CHARACTERS_PATTERN, "").trim();
+    return data.replaceAll(allowSpaces ? UNWANTED_CHARACTERS_WITH_SPACES_PATTERN : UNWANTED_CHARACTERS_PATTERN, "").trim();
   }
 
   /**
