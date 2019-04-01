@@ -9,6 +9,8 @@
     <version>0.3</version>
 
     <properties>
+        <main.runnable.class>org.linkja.hashing.Runner</main.runnable.class>
+
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>${maven.compiler.source}</maven.compiler.target>
@@ -108,7 +110,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>org.linkja.hashing.Runner</mainClass>
+                            <mainClass>${main.runnable.class}</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
@@ -135,7 +137,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>org.linkja.hashing.Runner</mainClass>
+                            <mainClass>${main.runnable.class}</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
