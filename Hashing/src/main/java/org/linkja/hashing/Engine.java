@@ -10,6 +10,7 @@ import java.io.*;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -181,21 +182,29 @@ public class Engine {
     // Open up our output streams for hash results, crosswalks and invalid results.  We may have an optional 4th file
     // for a file mixing hashes and PHI.
     String fileTimestamp = LocalDateTime.now().format(fileTimestampFormatter);
-    BufferedWriter hashWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),
-            String.format("hashes_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp)));
+    Path hashPath = Paths.get(this.parameters.getOutputDirectory().toString(),
+            String.format("hashes_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp));
+    BufferedWriter hashWriter = Files.newBufferedWriter(hashPath);
     CSVPrinter hashPrinter = createHashPrinter(hashWriter);
-    BufferedWriter crosswalkWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),
-            String.format("DONOTSEND_crosswalk_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp)));
+
+    Path crosswalkPath = Paths.get(this.parameters.getOutputDirectory().toString(),
+            String.format("DONOTSEND_crosswalk_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp));
+    BufferedWriter crosswalkWriter = Files.newBufferedWriter(crosswalkPath);
     CSVPrinter crosswalkPrinter = createCrosswalkPrinter(crosswalkWriter);
-    BufferedWriter invalidDataWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),
-            String.format("DONOTSEND_invaliddata_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp)));
+
+    Path invalidDataPath = Paths.get(this.parameters.getOutputDirectory().toString(),
+            String.format("DONOTSEND_invaliddata_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp));
+    BufferedWriter invalidDataWriter = Files.newBufferedWriter(invalidDataPath);
     CSVPrinter invalidDataPrinter = createInvalidDataPrinter(invalidDataWriter);
+
+    Path combinedHashedUnhashedPath = null;
     BufferedWriter combinedHashedUnhashedWriter = null;
     CSVPrinter combinedHashedUnhashedPrinter = null;
 
     if (parameters.isWriteUnhashedData()) {
-      combinedHashedUnhashedWriter = Files.newBufferedWriter(Paths.get(this.parameters.getOutputDirectory().toString(),
-              String.format("DONOTSEND_reviewonly_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp)));
+      combinedHashedUnhashedPath = Paths.get(this.parameters.getOutputDirectory().toString(),
+              String.format("DONOTSEND_reviewonly_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp));
+      combinedHashedUnhashedWriter = Files.newBufferedWriter(combinedHashedUnhashedPath);
       combinedHashedUnhashedPrinter = createCombinedHashedUnhashedPrinter(combinedHashedUnhashedWriter);
     }
 
@@ -217,6 +226,7 @@ public class Engine {
       if (!patientId.equals("")) {
         if (uniquePatientIds.contains(patientId)) {
           closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
+          deleteOutputFiles(hashPath, crosswalkPath, invalidDataPath, combinedHashedUnhashedPath);
           threadPool.shutdownNow();
           throw new LinkjaException(String.format("Patient IDs must be unique within the data file.  A duplicate copy of Patient ID %s was found on row %d.",
                   patientId.trim(), csvRecord.getRecordNumber()));
@@ -250,6 +260,7 @@ public class Engine {
             // rely on our results.
             threadPool.shutdownNow();
             closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
+            deleteOutputFiles(hashPath, crosswalkPath, invalidDataPath, combinedHashedUnhashedPath);
             return;
           }
 
@@ -269,7 +280,10 @@ public class Engine {
       this.numSubmittedJobs++;
     }
 
-    if (processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter)) {
+    boolean finalProcessSucceeded = processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter);
+    closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
+
+    if (finalProcessSucceeded) {
       executionReport.add("Completed processing results:");
       executionReport.add(String.format("  %d data rows read", this.numInputRows));
       int totalHashedRows = (this.numInputRows - this.numInvalidRows + this.numDerivedRows);
@@ -278,9 +292,35 @@ public class Engine {
       executionReport.add(String.format("     %d derived rows hashed", this.numDerivedRows));
       executionReport.add(String.format("  %d invalid rows", this.numInvalidRows));
     }
+    else {
+      deleteOutputFiles(hashPath, crosswalkPath, invalidDataPath, combinedHashedUnhashedPath);
+    }
 
-    closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
     threadPool.shutdown();
+  }
+
+  /**
+   * Delete all output files that were established.  This is a helper method, so it assumes we know the files are there
+   * and can be deleted.
+   * @param hashPath
+   * @param crosswalkPath
+   * @param invalidDataPath
+   * @param combinedHashedUnhashedPath
+   * @throws IOException
+   */
+  private void deleteOutputFiles(Path hashPath, Path crosswalkPath, Path invalidDataPath, Path combinedHashedUnhashedPath) throws IOException {
+    if (hashPath != null) {
+      Files.delete(hashPath);
+    }
+    if (crosswalkPath != null) {
+      Files.delete(crosswalkPath);
+    }
+    if (invalidDataPath != null) {
+      Files.delete(invalidDataPath);
+    }
+    if (combinedHashedUnhashedPath != null) {
+      Files.delete(combinedHashedUnhashedPath);
+    }
   }
 
   /**
