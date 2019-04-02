@@ -27,6 +27,8 @@ public class EngineParameters {
   public static final boolean DEFAULT_RUN_NORMALIZATION_STEP = true;
   public static final boolean DEFAULT_WRITE_UNHASHED_DATA = false;
   public static final int DEFAULT_MIN_SALT_LENGTH = 13;
+  public static final boolean DEFAULT_DISPLAY_SALT_MODE = false;
+  public static final boolean DEFAULT_HASHING_MODE = true;
 
   public static final DateTimeFormatter PrivateDateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
@@ -43,6 +45,8 @@ public class EngineParameters {
   private FileHelper fileHelper;
   private boolean writeUnhashedData = DEFAULT_WRITE_UNHASHED_DATA;
   private int minSaltLength = DEFAULT_MIN_SALT_LENGTH;
+  private boolean displaySaltMode = DEFAULT_DISPLAY_SALT_MODE;
+  private boolean hashingMode = DEFAULT_HASHING_MODE;
 
   public EngineParameters() {
     fileHelper = new FileHelper();
@@ -54,6 +58,34 @@ public class EngineParameters {
    */
   public EngineParameters(FileHelper helper) {
     fileHelper = helper;
+  }
+
+  /**
+   * Determine if all required parameters are set for the hashing mode
+   * @return
+   */
+  public boolean hashingModeOptionsSet() {
+    if (!this.isHashingMode()) {
+      return false;
+    }
+
+    return (getPrivateKeyFile() != null)
+            && (getSaltFile() != null)
+            && (getPatientFile() != null)
+            && (getPrivateDate() != null);
+  }
+
+  /**
+   * Determine if all required parameters are set for displaying the salt file contents
+   * @return
+   */
+  public boolean displaySaltModeOptionsSet() {
+    if (!this.isDisplaySaltMode()) {
+      return false;
+    }
+
+    return (getPrivateKeyFile() != null)
+            && (getSaltFile() != null);
   }
 
   public File getPrivateKeyFile() {
@@ -93,13 +125,18 @@ public class EngineParameters {
   }
 
   public void setPatientFile(File patientFile) throws FileNotFoundException {
-    if (!fileHelper.exists(patientFile)) {
+    if (patientFile != null && !fileHelper.exists(patientFile)) {
       throw new FileNotFoundException(String.format("Unable to find patient data file %s", patientFile.toString()));
     }
     this.patientFile = patientFile;
   }
 
   public void setPatientFile(String patientFile) throws FileNotFoundException {
+    if (patientFile == null || patientFile.equals("")) {
+      setPatientFile((File)null);
+      return;
+    }
+
     File file = new File(patientFile);
     setPatientFile(file);
   }
@@ -113,6 +150,11 @@ public class EngineParameters {
   }
 
   public void setPrivateDate(String privateDate) throws ParseException {
+    if (privateDate == null || privateDate.equals("")) {
+      setPrivateDate((LocalDate)null);
+      return;
+    }
+
     LocalDate parsedDate = LocalDate.parse(privateDate, PrivateDateFormatter);
     setPrivateDate(parsedDate);
   }
@@ -193,11 +235,6 @@ public class EngineParameters {
     this.writeUnhashedData = writeUnhashedData;
   }
 
-  public void setWriteUnhashedData(String writeUnhashedData) {
-    this.writeUnhashedData = (writeUnhashedData == null) ?
-            EngineParameters.DEFAULT_WRITE_UNHASHED_DATA : Boolean.parseBoolean(writeUnhashedData.trim());
-  }
-
   public int getBatchSize() {
     return batchSize;
   }
@@ -226,5 +263,21 @@ public class EngineParameters {
 
   public void setMinSaltLength(String minSaltLength) {
     setMinSaltLength((minSaltLength == null) ? -1 : Integer.parseInt(minSaltLength.trim()));
+  }
+
+  public boolean isDisplaySaltMode() {
+    return displaySaltMode;
+  }
+
+  public void setDisplaySaltMode(boolean displaySaltMode) {
+    this.displaySaltMode = displaySaltMode;
+  }
+
+  public boolean isHashingMode() {
+    return hashingMode;
+  }
+
+  public void setHashingMode(boolean hashingMode) {
+    this.hashingMode = hashingMode;
   }
 }

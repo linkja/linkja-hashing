@@ -9,10 +9,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidParameterException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
-import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -106,6 +104,18 @@ class EngineParametersTest {
   }
 
   @Test
+  void setPatientFile_NullEmpty() throws FileNotFoundException {
+    EngineParameters parameters = new EngineParameters();
+    assertNull(parameters.getPatientFile());
+    parameters.setPatientFile((File)null);
+    assertNull(parameters.getPatientFile());
+    parameters.setPatientFile((String)null);
+    assertNull(parameters.getPatientFile());
+    parameters.setPatientFile("");
+    assertNull(parameters.getPatientFile());
+  }
+
+  @Test
   void setPrivateDate_Valid() throws ParseException {
     EngineParameters parameters = new EngineParameters();
     String dateString = "01/15/2012";
@@ -120,6 +130,18 @@ class EngineParametersTest {
   void setPrivateDate_Invalid() {
     EngineParameters parameters = new EngineParameters();
     assertThrows(DateTimeParseException.class, () -> parameters.setPrivateDate("May 5, 2019"));
+  }
+
+  @Test
+  void setPrivateDate_NullEmpty() throws ParseException {
+    EngineParameters parameters = new EngineParameters();
+    assertNull(parameters.getPrivateDate());
+    parameters.setPrivateDate((LocalDate)null);
+    assertNull(parameters.getPrivateDate());
+    parameters.setPrivateDate((String)null);
+    assertNull(parameters.getPrivateDate());
+    parameters.setPrivateDate("");
+    assertNull(parameters.getPrivateDate());
   }
 
   @Test
@@ -265,21 +287,6 @@ class EngineParametersTest {
   }
 
   @Test
-  void setWriteUnhashedData_Conversion() {
-    EngineParameters parameters = new EngineParameters();
-    parameters.setWriteUnhashedData("true");
-    assert(parameters.isWriteUnhashedData());
-    parameters.setWriteUnhashedData("True");
-    assert(parameters.isWriteUnhashedData());
-    parameters.setWriteUnhashedData("false");
-    assertFalse(parameters.isWriteUnhashedData());
-
-    // This is the way boolean conversions work in Java - if it's not "true", it's false
-    parameters.setWriteUnhashedData("blah");
-    assertFalse(parameters.isWriteUnhashedData());
-  }
-
-  @Test
   void setMinSaltLength_Default() {
     EngineParameters parameters = new EngineParameters();
     assertEquals(EngineParameters.DEFAULT_MIN_SALT_LENGTH, parameters.getMinSaltLength());
@@ -303,5 +310,86 @@ class EngineParametersTest {
     assertThrows(InvalidParameterException.class, () -> parameters.setMinSaltLength(0));
     assertThrows(InvalidParameterException.class, () -> parameters.setMinSaltLength(-1));
     assertThrows(InvalidParameterException.class, () -> parameters.setMinSaltLength(null));
+  }
+
+  @Test
+  void setDisplaySaltContents_Default() {
+    EngineParameters parameters = new EngineParameters();
+    assertEquals(EngineParameters.DEFAULT_DISPLAY_SALT_MODE, parameters.isDisplaySaltMode());
+  }
+
+  @Test
+  void setHashingMode_Default() {
+    EngineParameters parameters = new EngineParameters();
+    assertEquals(EngineParameters.DEFAULT_HASHING_MODE, parameters.isHashingMode());
+  }
+
+  @Test
+  void hashingModeOptionsSet_Default() {
+    EngineParameters parameters = new EngineParameters();
+    assertFalse(parameters.hashingModeOptionsSet());
+  }
+
+  @Test
+  void hashingModeOptionsSet_HashingNotEnabled() {
+    EngineParameters parameters = new EngineParameters();
+    parameters.setHashingMode(false);
+    assertFalse(parameters.hashingModeOptionsSet());
+  }
+
+  @Test
+  void hashingModeOptionsSet_IncrementalSet() throws FileNotFoundException, ParseException {
+    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
+    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> true);
+
+    EngineParameters parameters = new EngineParameters(fileHelperMock);
+    parameters.setHashingMode(true);
+    File file = new File("/test/path/assumed/valid");
+    parameters.setPrivateKeyFile(file);
+    assertFalse(parameters.hashingModeOptionsSet());
+    parameters.setSaltFile(file);
+    assertFalse(parameters.hashingModeOptionsSet());
+    parameters.setPatientFile(file);
+    assertFalse(parameters.hashingModeOptionsSet());
+    parameters.setPrivateDate("01/01/1900");
+    // At this point both required parameters are set so it should be valid
+    assertTrue(parameters.hashingModeOptionsSet());
+  }
+
+  @Test
+  void displaySaltModeOptionsSet_Default() {
+    EngineParameters parameters = new EngineParameters();
+    assertFalse(parameters.displaySaltModeOptionsSet());
+  }
+
+  @Test
+  void displaySaltModeOptionsSet_DisplaySaltNotEnabled() throws FileNotFoundException {
+    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
+    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> true);
+
+    EngineParameters parameters = new EngineParameters(fileHelperMock);
+    parameters.setDisplaySaltMode(false);
+    assertFalse(parameters.displaySaltModeOptionsSet());
+
+    // Even after setting the required parameters, it's not enabled because the mode is still turned off
+    File file = new File("/test/path/assumed/valid");
+    parameters.setPrivateKeyFile(file);
+    parameters.setSaltFile(file);
+    assertFalse(parameters.displaySaltModeOptionsSet());
+  }
+
+  @Test
+  void displaySaltModeOptionsSet_IncrementalSet() throws FileNotFoundException {
+    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
+    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> true);
+
+    EngineParameters parameters = new EngineParameters(fileHelperMock);
+    parameters.setDisplaySaltMode(true);
+    File file = new File("/test/path/assumed/valid");
+    parameters.setPrivateKeyFile(file);
+    assertFalse(parameters.displaySaltModeOptionsSet());
+    parameters.setSaltFile(file);
+    // At this point both required parameters are set so it should be valid
+    assertTrue(parameters.displaySaltModeOptionsSet());
   }
 }

@@ -32,18 +32,26 @@ public class Runner {
 
     long startTime = System.nanoTime();
 
+    // There are two modes under which our program can run - hashing and displaySalt.  Depending on which of these
+    // modes is set, we have different requirements for other parameters.
+    //
     // Our parameters come from the command line and from a local config.properties file.  We split these up under the
     // assumption that those most likely to change across run should be passed in the command line, and those most
     // likely to remain consistent across runs should be in a config.properties file.
     EngineParameters parameters = new EngineParameters();
     try {
+      // First get which mode is set
+      parameters.setHashingMode(cmd.hasOption("hashing"));
+      parameters.setDisplaySaltMode(cmd.hasOption("displaySalt"));
+
+      // Get the additional parameters that may be set
       parameters.setPrivateKeyFile(cmd.getOptionValue("privateKey"));
       parameters.setSaltFile(cmd.getOptionValue("saltFile"));
       parameters.setPatientFile(cmd.getOptionValue("patientFile"));
       parameters.setPrivateDate(cmd.getOptionValue("privateDate"));
       parameters.setDelimiter(cmd.getOptionValue("delimiter", new String(new char[] { EngineParameters.DEFAULT_DELIMITER })));
       parameters.setRecordExclusionMode(parseRecordExclusionMode(cmd.getOptionValue("exclusionMode")));
-      parameters.setWriteUnhashedData(cmd.getOptionValue("writeUnhashed"));
+      parameters.setWriteUnhashedData(cmd.hasOption("writeUnhashed"));
       parameters = loadConfig(parameters);
       String outputDirectory = cmd.getOptionValue("outDirectory");
       if (outputDirectory == null || outputDirectory.equals("")) {
@@ -52,6 +60,16 @@ public class Runner {
         outputDirectory = path.toString();
       }
       parameters.setOutputDirectory(outputDirectory);
+
+      if (parameters.isDisplaySaltMode() && !parameters.displaySaltModeOptionsSet()) {
+        throw new LinkjaException("Not all of the required parameters were provided");
+      }
+      else if (parameters.isHashingMode() && !parameters.hashingModeOptionsSet()) {
+        throw new LinkjaException("Not all of the required parameters were provided");
+      }
+      else if (!parameters.isDisplaySaltMode() && !parameters.isHashingMode()) {
+        throw new LinkjaException("Please specify either --hashing or --displaySalt");
+      }
     }
     catch (Exception exc) {
       displayCommandLineException(exc, options);
@@ -70,11 +88,24 @@ public class Runner {
     }
 
     try {
-      Engine engine = new Engine(parameters, hashParameters);
-      engine.run();
+      // Displaying the salt file may or may not be set
+      if (parameters.isDisplaySaltMode()) {
+        System.out.println("Salt File Contents");
+        System.out.printf("  Site ID:      %s\n", hashParameters.getSiteId());
+        System.out.printf("  Site Name:    %s\n", hashParameters.getSiteName());
+        System.out.printf("  Private Salt: %s\n", hashParameters.getPrivateSalt());
+        System.out.printf("  Project Salt: %s\n", hashParameters.getProjectSalt());
+        System.out.printf("  Project ID:   %s\n", hashParameters.getProjectId());
+      }
 
-      String report = String.join("\r\n", engine.getExecutionReport());
-      System.out.println(report);
+      // Hashing mode may or may not be set
+      if (parameters.isHashingMode()) {
+        Engine engine = new Engine(parameters, hashParameters);
+        engine.run();
+
+        String report = String.join("\r\n", engine.getExecutionReport());
+        System.out.println(report);
+      }
     }
     catch (Exception exc) {
       System.out.println("ERROR - We encountered an error while processing your data file");
@@ -85,7 +116,7 @@ public class Runner {
     long endTime = System.nanoTime();
 
     double elapsedSeconds = (double)(endTime - startTime) / 1_000_000_000.0;
-    System.out.printf("Total execution time: %2f sec", elapsedSeconds);
+    System.out.printf("Total execution time: %2f sec\n", elapsedSeconds);
   }
 
   /**
@@ -153,6 +184,14 @@ public class Runner {
   public static Options setUpCommandLine() {
     Options options = new Options();
 
+    Option displaySaltOpt = new Option("ds", "displaySalt", false, "display the salt file contents");
+    displaySaltOpt.setRequired(false);
+    options.addOption(displaySaltOpt);
+
+    Option hashingOpt = new Option("h", "hashing", false, "perform hashing on an input file");
+    hashingOpt.setRequired(false);
+    options.addOption(hashingOpt);
+
     Option keyFileOpt = new Option("key", "privateKey", true, "path to private key file");
     keyFileOpt.setRequired(true);
     options.addOption(keyFileOpt);
@@ -162,11 +201,11 @@ public class Runner {
     options.addOption(saltFileOpt);
 
     Option patientFileOpt = new Option("patient", "patientFile", true, "path to the file containing patient data");
-    patientFileOpt.setRequired(true);
+    patientFileOpt.setRequired(false);
     options.addOption(patientFileOpt);
 
     Option privateDateOpt = new Option("date", "privateDate", true, "the private date (as MM/DD/YYYY)");
-    privateDateOpt.setRequired(true);
+    privateDateOpt.setRequired(false);
     options.addOption(privateDateOpt);
 
     Option outputDirectoryOpt = new Option("out", "outDirectory", true, "the base directory to create output.  If not specified, will use the current directory.");
@@ -177,7 +216,7 @@ public class Runner {
     delimiterOpt.setRequired(false);
     options.addOption(delimiterOpt);
 
-    Option writeUnhashedOpt = new Option("unhashed", "writeUnhashed", true, "write out the original unhashed data in the result file (for debugging");
+    Option writeUnhashedOpt = new Option("unhashed", "writeUnhashed", false, "write out the original unhashed data in the result file (for debugging");
     writeUnhashedOpt.setRequired(false);
     options.addOption(writeUnhashedOpt);
 
