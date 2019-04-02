@@ -30,7 +30,7 @@ public class Engine {
   public static final String LAST_NAME_FIELD = "last_name";
   public static final String DATE_OF_BIRTH_FIELD = "date_of_birth";
   public static final String SOCIAL_SECURITY_NUMBER = "social_security_number";
-  public static final String EXCEPTION_FLAG = "exception_flag";
+  public static final String EXCLUSION = "exclusion";
 
   // List other canonical field names, used for output
   public static final String SITE_ID_FIELD = "siteid";
@@ -108,7 +108,7 @@ public class Engine {
         for (CSVRecord csvRecord : parser) {
           String name = csvRecord.get(0);
           String match = csvRecord.get(1);
-          ExceptionStep.addMatchRuleToCollection(name, match, csvRecord.getRecordNumber(), this.genericNames);
+          ExclusionStep.addMatchRuleToCollection(name, match, csvRecord.getRecordNumber(), this.genericNames);
         }
       }
     }
@@ -244,7 +244,7 @@ public class Engine {
       if (batch.size() == batchSize) {
         batch.trimToSize();  // Free up unused space
         taskQueue.submit(new EngineWorkerThread(batch, this.parameters.isRunNormalizationStep(),
-                this.parameters.getRecordExceptionMode(), this.prefixes, this.suffixes, this.genericNames,
+                this.parameters.getRecordExclusionMode(), this.prefixes, this.suffixes, this.genericNames,
                 this.hashParameters));
         batch.clear();  // The worker thread has its copy, so we can clear ours out to start a new batch
         this.numSubmittedJobs++;
@@ -275,7 +275,7 @@ public class Engine {
     if (batch.size() > 0) {
       batch.trimToSize();
       taskQueue.submit(new EngineWorkerThread(batch, this.parameters.isRunNormalizationStep(),
-              this.parameters.getRecordExceptionMode(), this.prefixes, this.suffixes, this.genericNames,
+              this.parameters.getRecordExclusionMode(), this.prefixes, this.suffixes, this.genericNames,
               this.hashParameters));
       this.numSubmittedJobs++;
     }
@@ -383,7 +383,7 @@ public class Engine {
             "hash8",  // HashingStep.FNAME3LNAMEDOB_FIELD
             "hash9",  // HashingStep.FNAMELNAMEDOBDSSN_FIELD
             "hash10", // HashingStep.FNAMELNAMEDOBYSSN_FIELD
-            Engine.EXCEPTION_FLAG));
+            Engine.EXCLUSION));
   }
 
   private CSVPrinter createCombinedHashedUnhashedPrinter(BufferedWriter writer) throws IOException {
@@ -408,7 +408,7 @@ public class Engine {
             "hash8",  // HashingStep.FNAME3LNAMEDOB_FIELD
             "hash9",  // HashingStep.FNAMELNAMEDOBDSSN_FIELD
             "hash10", // HashingStep.FNAMELNAMEDOBYSSN_FIELD
-            Engine.EXCEPTION_FLAG));
+            Engine.EXCLUSION));
   }
 
   /**

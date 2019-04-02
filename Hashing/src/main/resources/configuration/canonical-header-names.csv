@@ -33,4 +33,4 @@ social_security_number,social_security_number
 ssn,social_security_number
 soc_sec_num,social_security_number
 "soc sec num",social_security_number
-exception_flag,exception_flag
+exclusion,exclusion

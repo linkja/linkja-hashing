@@ -5,7 +5,6 @@ import java.io.FileNotFoundException;
 import java.nio.file.Path;
 import java.security.InvalidParameterException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
@@ -13,8 +12,8 @@ import java.time.format.DateTimeFormatter;
  * This represents a consolidated collection of parameters needed to run the engine.
  */
 public class EngineParameters {
-  public enum RecordExceptionMode {
-    NoExceptions, GenerateExceptions, ExceptionsIncluded
+  public enum RecordExclusionMode {
+    NoExclusions, GenerateExclusions, ExclusionsIncluded
   }
 
   public static final int MIN_NUM_WORKER_THREADS = 1;
@@ -22,7 +21,7 @@ public class EngineParameters {
   public static final int MIN_SALT_LENGTH = 1;
 
   public static final char DEFAULT_DELIMITER = ',';
-  public static final RecordExceptionMode DEFAULT_RECORD_EXCEPTION_MODE = RecordExceptionMode.NoExceptions;
+  public static final RecordExclusionMode DEFAULT_RECORD_EXCLUSION_MODE = RecordExclusionMode.NoExclusions;
   public static final int DEFAULT_WORKER_THREADS = 3;
   public static final int DEFAULT_BATCH_SIZE = 1000;
   public static final boolean DEFAULT_RUN_NORMALIZATION_STEP = true;
@@ -37,7 +36,7 @@ public class EngineParameters {
   private LocalDate privateDate;
   private Path outputDirectory;
   private char delimiter = DEFAULT_DELIMITER;
-  private RecordExceptionMode recordExceptionMode = DEFAULT_RECORD_EXCEPTION_MODE;
+  private RecordExclusionMode recordExclusionMode = DEFAULT_RECORD_EXCLUSION_MODE;
   private int numWorkerThreads = DEFAULT_WORKER_THREADS;
   private int batchSize = DEFAULT_BATCH_SIZE;
   private boolean runNormalizationStep = DEFAULT_RUN_NORMALIZATION_STEP;
@@ -150,12 +149,12 @@ public class EngineParameters {
     this.delimiter = delimiter.trim().charAt(0);
   }
 
-  public RecordExceptionMode getRecordExceptionMode() {
-    return recordExceptionMode;
+  public RecordExclusionMode getRecordExclusionMode() {
+    return recordExclusionMode;
   }
 
-  public void setRecordExceptionMode(RecordExceptionMode recordExceptionmode) {
-    this.recordExceptionMode = recordExceptionmode;
+  public void setRecordExclusionMode(RecordExclusionMode recordExclusionMode) {
+    this.recordExclusionMode = recordExclusionMode;
   }
 
   public int getNumWorkerThreads() {

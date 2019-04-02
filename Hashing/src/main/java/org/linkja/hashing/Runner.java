@@ -42,7 +42,7 @@ public class Runner {
       parameters.setPatientFile(cmd.getOptionValue("patientFile"));
       parameters.setPrivateDate(cmd.getOptionValue("privateDate"));
       parameters.setDelimiter(cmd.getOptionValue("delimiter", new String(new char[] { EngineParameters.DEFAULT_DELIMITER })));
-      parameters.setRecordExceptionMode(parseRecordExceptionMode(cmd.getOptionValue("exceptionMode")));
+      parameters.setRecordExclusionMode(parseRecordExclusionMode(cmd.getOptionValue("exclusionMode")));
       parameters.setWriteUnhashedData(cmd.getOptionValue("writeUnhashed"));
       parameters = loadConfig(parameters);
       String outputDirectory = cmd.getOptionValue("outDirectory");
@@ -107,7 +107,7 @@ public class Runner {
         throw new FileNotFoundException("The properties file 'config.properties' could not be found in the classpath");
       }
 
-      parameters.setRecordExceptionMode(parseRecordExceptionMode(prop.getProperty("recordExceptionMode")));
+      parameters.setRecordExclusionMode(parseRecordExclusionMode(prop.getProperty("recordExclusionMode")));
       parameters.setRunNormalizationStep(prop.getProperty("runNormalizationStep", Boolean.toString(EngineParameters.DEFAULT_RUN_NORMALIZATION_STEP)));
       parameters.setNumWorkerThreads(prop.getProperty("workerThreads", Integer.toString(EngineParameters.DEFAULT_WORKER_THREADS)));
       parameters.setBatchSize(prop.getProperty("batchSize", Integer.toString(EngineParameters.DEFAULT_BATCH_SIZE)));
@@ -125,25 +125,25 @@ public class Runner {
   /**
    * Utility method to take a string representation of the record exception mode, and convert it to an internal enum
    * @param option The string value to process
-   * @return The EngineParameters.RecordExceptionMode enum value
+   * @return The EngineParameters.RecordExclusionMode enum value
    * @throws LinkjaException
    */
-  public static EngineParameters.RecordExceptionMode parseRecordExceptionMode(String option) throws LinkjaException {
+  public static EngineParameters.RecordExclusionMode parseRecordExclusionMode(String option) throws LinkjaException {
     if (option == null || option.isEmpty()) {
-      return EngineParameters.DEFAULT_RECORD_EXCEPTION_MODE;
+      return EngineParameters.DEFAULT_RECORD_EXCLUSION_MODE;
     }
 
     if (option.equalsIgnoreCase("None")) {
-      return EngineParameters.RecordExceptionMode.NoExceptions;
+      return EngineParameters.RecordExclusionMode.NoExclusions;
     }
     else if (option.equalsIgnoreCase("Generate")) {
-      return EngineParameters.RecordExceptionMode.GenerateExceptions;
+      return EngineParameters.RecordExclusionMode.GenerateExclusions;
     }
     else if (option.equalsIgnoreCase("Included")) {
-      return EngineParameters.RecordExceptionMode.ExceptionsIncluded;
+      return EngineParameters.RecordExclusionMode.ExclusionsIncluded;
     }
 
-    throw new LinkjaException("For the exceptionMode parameter, please specify a value of None, Generate or Included");
+    throw new LinkjaException("For the exclusionMode parameter, please specify a value of None, Generate or Included");
   }
 
   /**

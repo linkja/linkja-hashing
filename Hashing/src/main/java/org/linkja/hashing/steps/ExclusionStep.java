@@ -7,7 +7,7 @@ import org.linkja.hashing.LinkjaException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ExceptionStep implements IStep {
+public class ExclusionStep implements IStep {
   public static final String PARTIAL_MATCH = "partial";
   public static final String EXACT_MATCH = "exact";
 
@@ -18,7 +18,7 @@ public class ExceptionStep implements IStep {
    * for flagging patients as an exception.
    * @param genericNames
    */
-  public ExceptionStep(HashMap<String,String> genericNames) {
+  public ExclusionStep(HashMap<String,String> genericNames) {
     if (this.genericNames == null) {
       this.genericNames = genericNames;
     }

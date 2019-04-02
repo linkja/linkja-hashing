@@ -13,18 +13,18 @@ import java.util.concurrent.Callable;
 public class EngineWorkerThread implements Callable<List<DataRow>> {
   private List<DataRow> dataRows;
   private boolean runNormalizationStep;
-  private EngineParameters.RecordExceptionMode exceptionMode;
+  private EngineParameters.RecordExclusionMode exclusionMode;
   private static ArrayList<String> prefixes = null;
   private static ArrayList<String> suffixes = null;
   private static HashMap<String, String> genericNames = null;
   private static HashParameters hashParameters;
 
-  public EngineWorkerThread(List<DataRow> dataRows, boolean runNormalizationStep, EngineParameters.RecordExceptionMode exceptionMode,
+  public EngineWorkerThread(List<DataRow> dataRows, boolean runNormalizationStep, EngineParameters.RecordExclusionMode exclusionMode,
                             ArrayList<String> prefixes, ArrayList<String> suffixes, HashMap<String, String> genericNames,
                             HashParameters hashParameters) {
     this.dataRows = new ArrayList<DataRow>(dataRows);
     this.runNormalizationStep = runNormalizationStep;
-    this.exceptionMode = exceptionMode;
+    this.exclusionMode = exclusionMode;
     this.prefixes = prefixes;
     this.suffixes = suffixes;
     this.genericNames = genericNames;
@@ -42,8 +42,8 @@ public class EngineWorkerThread implements Callable<List<DataRow>> {
     // If the user doesn't want exception flags, or has already created them, we are going to skip this step in
     // the processing pipeline.
     // TODO - If the user said they have already provided the exception flag, should we confirm that?
-    if (exceptionMode == EngineParameters.RecordExceptionMode.GenerateExceptions) {
-      steps.add(new ExceptionStep(this.genericNames));
+    if (exclusionMode == EngineParameters.RecordExclusionMode.GenerateExclusions) {
+      steps.add(new ExclusionStep(this.genericNames));
     }
     steps.add(new PermuteStep());
     steps.add(new HashingStep(this.hashParameters));

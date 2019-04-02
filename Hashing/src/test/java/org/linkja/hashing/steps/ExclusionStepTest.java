@@ -5,29 +5,27 @@ import org.linkja.hashing.DataRow;
 import org.linkja.hashing.Engine;
 import org.linkja.hashing.LinkjaException;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
-import static javax.swing.UIManager.put;
 import static org.junit.jupiter.api.Assertions.*;
 
-class ExceptionStepTest {
+class ExclusionStepTest {
 
   private static HashMap<String,String> genericNames = new HashMap<String,String>() {{
-    put("BABY", ExceptionStep.PARTIAL_MATCH);
-    put("VIP", ExceptionStep.EXACT_MATCH);
+    put("BABY", ExclusionStep.PARTIAL_MATCH);
+    put("VIP", ExclusionStep.EXACT_MATCH);
   }};
 
   @Test
   void checkIsException_NullEmpty() {
-    ExceptionStep step = new ExceptionStep(genericNames);
+    ExclusionStep step = new ExclusionStep(genericNames);
     assertThrows(NullPointerException.class, () -> step.checkIsException(null, null));
     assertFalse(step.checkIsException("", ""));
   }
 
   @Test
   void checkIsException_Partial() {
-    ExceptionStep step = new ExceptionStep(genericNames);
+    ExclusionStep step = new ExclusionStep(genericNames);
     assertFalse(step.checkIsException("BABY", "SMITH"));
     assert(step.checkIsException("BABY ONE", "SMITH"));
     assert(step.checkIsException("ONE BABY", "SMITH"));
@@ -43,7 +41,7 @@ class ExceptionStepTest {
 
   @Test
   void checkIsException_Exact() {
-    ExceptionStep step = new ExceptionStep(genericNames);
+    ExclusionStep step = new ExclusionStep(genericNames);
     assert(step.checkIsException("VIP", "ONE"));
     assert(step.checkIsException("ONE", "VIP"));
     assertFalse(step.checkIsException("VIPER", "ONE"));
@@ -56,49 +54,49 @@ class ExceptionStepTest {
 
   @Test
   void addMatchRuleToCollection_NullEmpty() {
-    assertThrows(NullPointerException.class, () -> ExceptionStep.addMatchRuleToCollection(null, null, 0, null));
+    assertThrows(NullPointerException.class, () -> ExclusionStep.addMatchRuleToCollection(null, null, 0, null));
 
     HashMap<String,String> genericNames = new HashMap<String,String>();
-    assertThrows(LinkjaException.class, () -> ExceptionStep.addMatchRuleToCollection(null, "ok", 0, genericNames));
-    assertThrows(LinkjaException.class, () -> ExceptionStep.addMatchRuleToCollection("ok", null, 0, genericNames));
-    assertThrows(LinkjaException.class, () -> ExceptionStep.addMatchRuleToCollection("", "ok", 0, genericNames));
-    assertThrows(LinkjaException.class, () -> ExceptionStep.addMatchRuleToCollection("ok", "", 0, genericNames));
-    assertThrows(LinkjaException.class, () -> ExceptionStep.addMatchRuleToCollection("   ", "ok", 0, genericNames));
-    assertThrows(LinkjaException.class, () -> ExceptionStep.addMatchRuleToCollection("ok", "   ", 0, genericNames));
+    assertThrows(LinkjaException.class, () -> ExclusionStep.addMatchRuleToCollection(null, "ok", 0, genericNames));
+    assertThrows(LinkjaException.class, () -> ExclusionStep.addMatchRuleToCollection("ok", null, 0, genericNames));
+    assertThrows(LinkjaException.class, () -> ExclusionStep.addMatchRuleToCollection("", "ok", 0, genericNames));
+    assertThrows(LinkjaException.class, () -> ExclusionStep.addMatchRuleToCollection("ok", "", 0, genericNames));
+    assertThrows(LinkjaException.class, () -> ExclusionStep.addMatchRuleToCollection("   ", "ok", 0, genericNames));
+    assertThrows(LinkjaException.class, () -> ExclusionStep.addMatchRuleToCollection("ok", "   ", 0, genericNames));
   }
 
   @Test
   void addMatchRuleToCollection_ValidateMatchRule() throws LinkjaException {
-    assertThrows(LinkjaException.class, () -> ExceptionStep.addMatchRuleToCollection("ok", "ok", 0, new HashMap<String,String>()));
+    assertThrows(LinkjaException.class, () -> ExclusionStep.addMatchRuleToCollection("ok", "ok", 0, new HashMap<String,String>()));
 
     HashMap<String,String> genericNames = new HashMap<String,String>();
-    ExceptionStep.addMatchRuleToCollection("ok", ExceptionStep.EXACT_MATCH, 0, genericNames);
+    ExclusionStep.addMatchRuleToCollection("ok", ExclusionStep.EXACT_MATCH, 0, genericNames);
     assertEquals(1, genericNames.size());
     genericNames = new HashMap<String,String>();
 
-    ExceptionStep.addMatchRuleToCollection("ok", ExceptionStep.PARTIAL_MATCH, 0, genericNames);
+    ExclusionStep.addMatchRuleToCollection("ok", ExclusionStep.PARTIAL_MATCH, 0, genericNames);
     assertEquals(1, genericNames.size());
     genericNames = new HashMap<String,String>();
 
-    ExceptionStep.addMatchRuleToCollection("ok", ExceptionStep.EXACT_MATCH.toUpperCase(), 0, genericNames);
+    ExclusionStep.addMatchRuleToCollection("ok", ExclusionStep.EXACT_MATCH.toUpperCase(), 0, genericNames);
     assertEquals(1, genericNames.size());
     genericNames = new HashMap<String,String>();
 
-    ExceptionStep.addMatchRuleToCollection("ok", ExceptionStep.PARTIAL_MATCH.toUpperCase(), 0, genericNames);
+    ExclusionStep.addMatchRuleToCollection("ok", ExclusionStep.PARTIAL_MATCH.toUpperCase(), 0, genericNames);
     assertEquals(1, genericNames.size());
   }
 
   @Test
   void addMatchRuleToCollection_CheckForDuplicates() throws LinkjaException {
     HashMap<String,String> genericNames = new HashMap<String,String>();
-    ExceptionStep.addMatchRuleToCollection("ok", ExceptionStep.EXACT_MATCH, 0, genericNames);
-    ExceptionStep.addMatchRuleToCollection("ok ", ExceptionStep.EXACT_MATCH, 0, genericNames);  // Yes, whitespace differences are unique
-    assertThrows(LinkjaException.class, () -> ExceptionStep.addMatchRuleToCollection("ok", ExceptionStep.EXACT_MATCH, 0, genericNames));
+    ExclusionStep.addMatchRuleToCollection("ok", ExclusionStep.EXACT_MATCH, 0, genericNames);
+    ExclusionStep.addMatchRuleToCollection("ok ", ExclusionStep.EXACT_MATCH, 0, genericNames);  // Yes, whitespace differences are unique
+    assertThrows(LinkjaException.class, () -> ExclusionStep.addMatchRuleToCollection("ok", ExclusionStep.EXACT_MATCH, 0, genericNames));
   }
 
   @Test
   void run_NullEmpty() {
-    ExceptionStep step = new ExceptionStep(genericNames);
+    ExclusionStep step = new ExclusionStep(genericNames);
     assertEquals(null, step.run(null));
 
     DataRow row = new DataRow();
@@ -107,7 +105,7 @@ class ExceptionStepTest {
 
   @Test
   void run_IntegrationTests() {
-    ExceptionStep step = new ExceptionStep(genericNames);
+    ExclusionStep step = new ExclusionStep(genericNames);
     DataRow row = new DataRow() {{
       put(Engine.FIRST_NAME_FIELD, "BABY ");
       put(Engine.PATIENT_ID_FIELD, "123456");
@@ -135,7 +133,7 @@ class ExceptionStepTest {
       put(Engine.LAST_NAME_FIELD, "SMITH");
     }};
 
-    ExceptionStep step = new ExceptionStep(genericNames);
+    ExclusionStep step = new ExclusionStep(genericNames);
     row = step.run(row);
     assert(row.hasCompletedStep(step.getStepName()));
   }
@@ -149,7 +147,7 @@ class ExceptionStepTest {
     }};
 
     row.setInvalidReason("Invalid for testing purposes");
-    ExceptionStep step = new ExceptionStep(genericNames);
+    ExclusionStep step = new ExclusionStep(genericNames);
     row = step.run(row);
     assertFalse(row.hasCompletedStep(step.getStepName()));
   }
