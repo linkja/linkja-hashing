@@ -53,6 +53,9 @@ public class Engine {
 
   private int numSubmittedJobs = 0;
   private int numCompletedJobs = 0;
+  private int numInputRows = 0;
+  private int numInvalidRows = 0;
+  private int numDerivedRows = 0;
 
   private ArrayList<String> executionReport = new ArrayList<String>();
 
@@ -196,9 +199,13 @@ public class Engine {
       combinedHashedUnhashedPrinter = createCombinedHashedUnhashedPrinter(combinedHashedUnhashedWriter);
     }
 
+    // Reset all of our tracking counters right before we begin the processing cycle
     this.numSubmittedJobs = 0;
     this.numCompletedJobs = 0;
-    int totalRows = 0;
+    this.numInvalidRows = 0;
+    this.numDerivedRows = 0;
+    this.numInputRows = 0;
+
     int batchSize = this.parameters.getBatchSize();
     int numThreads = this.parameters.getNumWorkerThreads();
     ArrayList<DataRow> batch = new ArrayList<DataRow>(batchSize);  // Pre-allocate the memory
@@ -221,7 +228,7 @@ public class Engine {
       // data structure we created for this work.
       DataRow row = csvRecordToDataRow(csvRecord);
       batch.add(row);
-      totalRows++;
+      this.numInputRows++;
 
       // Once we have a batch of work to do, create a new processing task.
       if (batch.size() == batchSize) {
@@ -263,7 +270,13 @@ public class Engine {
     }
 
     if (processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter)) {
-      executionReport.add(String.format("Completed hashing %d data rows", totalRows));
+      executionReport.add("Completed processing results:");
+      executionReport.add(String.format("  %d data rows read", this.numInputRows));
+      int totalHashedRows = (this.numInputRows - this.numInvalidRows + this.numDerivedRows);
+      executionReport.add(String.format("  %d total hashed rows created", totalHashedRows));
+      executionReport.add(String.format("     %d original data rows hashed", (totalHashedRows - this.numDerivedRows)));
+      executionReport.add(String.format("     %d derived rows hashed", this.numDerivedRows));
+      executionReport.add(String.format("  %d invalid rows", this.numInvalidRows));
     }
 
     closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
@@ -477,11 +490,13 @@ public class Engine {
       // Process all derived rows as well
       if (row.hasDerivedRows()) {
         for (DataRow derivedRow : row.getDerivedRows()) {
+          this.numDerivedRows++;
           writeDataRowResult(derivedRow, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter);
         }
       }
     }
     else {
+      this.numInvalidRows++;
       invalidDataPrinter.printRecord(
               row.getRowNumber(),
               row.get(Engine.PATIENT_ID_FIELD),
