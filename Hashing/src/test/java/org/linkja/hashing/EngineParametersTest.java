@@ -116,6 +116,47 @@ class EngineParametersTest {
   }
 
   @Test
+  void setEncryptionKeyFile_Found() throws FileNotFoundException {
+    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
+    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> true);
+
+    EngineParameters parameters = new EngineParameters(fileHelperMock);
+    File file = new File("/test/path/assumed/valid");
+    parameters.setEncryptionKeyFile(file);
+    assertEquals(file.getPath(), parameters.getEncryptionKeyFile().getPath());
+
+    // Test with string parameter
+    String filePath = file.getPath();
+    parameters.setEncryptionKeyFile(filePath);
+    assertEquals(filePath, parameters.getEncryptionKeyFile().getPath());
+  }
+
+  @Test
+  void setEncryptionKeyFile_NotFound() {
+    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
+    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> false);
+
+    EngineParameters parameters = new EngineParameters(fileHelperMock);
+    File file = new File("/test/path/assumed/invalid");
+    assertThrows(FileNotFoundException.class, () -> parameters.setEncryptionKeyFile(file));
+
+    String filePath = "/test/path/assumed/invalid";
+    assertThrows(FileNotFoundException.class, () -> parameters.setEncryptionKeyFile(filePath));
+  }
+
+  @Test
+  void setEncryptionKeyFile_NullEmpty() throws FileNotFoundException {
+    EngineParameters parameters = new EngineParameters();
+    assertNull(parameters.getEncryptionKeyFile());
+    parameters.setEncryptionKeyFile((File)null);
+    assertNull(parameters.getEncryptionKeyFile());
+    parameters.setEncryptionKeyFile((String)null);
+    assertNull(parameters.getEncryptionKeyFile());
+    parameters.setEncryptionKeyFile("");
+    assertNull(parameters.getEncryptionKeyFile());
+  }
+
+  @Test
   void setPrivateDate_Valid() throws ParseException {
     EngineParameters parameters = new EngineParameters();
     String dateString = "01/15/2012";

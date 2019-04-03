@@ -49,6 +49,7 @@ public class Runner {
       parameters.setSaltFile(cmd.getOptionValue("saltFile"));
       parameters.setPatientFile(cmd.getOptionValue("patientFile"));
       parameters.setPrivateDate(cmd.getOptionValue("privateDate"));
+      parameters.setEncryptionKeyFile(cmd.getOptionValue("encryptionKey"));
       parameters.setDelimiter(cmd.getOptionValue("delimiter", new String(new char[] { EngineParameters.DEFAULT_DELIMITER })));
       parameters.setRecordExclusionMode(parseRecordExclusionMode(cmd.getOptionValue("exclusionMode")));
       parameters.setWriteUnhashedData(cmd.hasOption("writeUnhashed"));
@@ -195,6 +196,10 @@ public class Runner {
     Option keyFileOpt = new Option("key", "privateKey", true, "path to private key file");
     keyFileOpt.setRequired(true);
     options.addOption(keyFileOpt);
+
+    Option encryptionKeyFileOpt = new Option("enc", "encryptionKey", true, "path to asymmetric encryption key file to encrypt hashed output");
+    encryptionKeyFileOpt.setRequired(false);
+    options.addOption(encryptionKeyFileOpt);
 
     Option saltFileOpt = new Option("salt", "saltFile", true, "path to encrypted salt file");
     saltFileOpt.setRequired(true);

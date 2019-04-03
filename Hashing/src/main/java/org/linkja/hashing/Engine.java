@@ -605,4 +605,8 @@ public class Engine {
   public ArrayList<String> getExecutionReport() {
     return executionReport;
   }
+
+  public void encryptOutput(String hashFileLocation) {
+
+  }
 }
