@@ -157,6 +157,20 @@ class EngineParametersTest {
   }
 
   @Test
+  void isEncryptingOutput() throws FileNotFoundException {
+    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
+    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> true);
+
+    EngineParameters parameters = new EngineParameters(fileHelperMock);
+    assertFalse(parameters.isEncryptingOutput());
+    File file = new File("/test/path/assumed/valid");
+    parameters.setEncryptionKeyFile(file);
+    assertTrue(parameters.isEncryptingOutput());
+    parameters.setEncryptionKeyFile((File)null);
+    assertFalse(parameters.isEncryptingOutput());
+  }
+
+  @Test
   void setPrivateDate_Valid() throws ParseException {
     EngineParameters parameters = new EngineParameters();
     String dateString = "01/15/2012";

@@ -291,6 +291,15 @@ public class Engine {
       executionReport.add(String.format("     %d original data rows hashed", (totalHashedRows - this.numDerivedRows)));
       executionReport.add(String.format("     %d derived rows hashed", this.numDerivedRows));
       executionReport.add(String.format("  %d invalid rows", this.numInvalidRows));
+
+      // If we are encrypting results, do that now
+      if (parameters.isEncryptingOutput()) {
+        try {
+          CryptoHelper.generateEncryptedKeyFile(parameters.getEncryptionKeyFile(), "");
+        } catch (Exception e) {
+          throw new LinkjaException("There was an error when trying to encrypt the hashed output.  The unencrypted hash files have been preserved.");
+        }
+      }
     }
     else {
       deleteOutputFiles(hashPath, crosswalkPath, invalidDataPath, combinedHashedUnhashedPath);
@@ -604,9 +613,5 @@ public class Engine {
 
   public ArrayList<String> getExecutionReport() {
     return executionReport;
-  }
-
-  public void encryptOutput(String hashFileLocation) {
-
   }
 }

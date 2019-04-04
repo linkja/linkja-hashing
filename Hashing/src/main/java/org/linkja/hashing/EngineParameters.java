@@ -129,7 +129,7 @@ public class EngineParameters {
    * Helper function to tell us if we should encrypt the hashing results or not.
    * @return
    */
-  public boolean isEncryptingResults() {
+  public boolean isEncryptingOutput() {
     return this.encryptionKeyFile != null;
   }
 

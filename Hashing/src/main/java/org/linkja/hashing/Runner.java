@@ -17,9 +17,6 @@ import java.util.Properties;
 
 // TODO: Write unit tests for helper methods (everything but main)
 public class Runner {
-  private static String SALT_FILE_DELIMITER = ",";
-  private static int NUM_SALT_PARTS = 5;
-
   public static void main(String[] args) {
     Options options = setUpCommandLine();
     CommandLine cmd = parseCommandLine(options, args);
@@ -31,6 +28,9 @@ public class Runner {
     }
 
     long startTime = System.nanoTime();
+
+    // Perform some initialization - purposefully done after timing has started.
+    Security.addProvider(new BouncyCastleProvider());
 
     // There are two modes under which our program can run - hashing and displaySalt.  Depending on which of these
     // modes is set, we have different requirements for other parameters.
@@ -79,7 +79,7 @@ public class Runner {
 
     HashParameters hashParameters = null;
     try {
-      hashParameters = parseProjectSalt(parameters.getSaltFile(), parameters.getPrivateKeyFile(), parameters.getMinSaltLength());
+      hashParameters = CryptoHelper.parseProjectSalt(parameters.getSaltFile(), parameters.getPrivateKeyFile(), parameters.getMinSaltLength());
       hashParameters.setPrivateDate(parameters.getPrivateDate());  // Provide a copy to our hashing parameters collection
     }
     catch (Exception exc) {
@@ -258,50 +258,5 @@ public class Runner {
     System.out.println();
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("Hashing", options);
-  }
-
-  /**
-   * Given an encrypted salt file, and a private decryption key, get out the hashing parameters that include site and
-   * project details.  Note that the HashParameters are considered sensitive information, because they are encrypted.
-   * @param saltFile
-   * @param decryptKey
-   * @return
-   * @throws Exception
-   */
-  public static HashParameters parseProjectSalt(File saltFile, File decryptKey, int minSaltLength) throws Exception {
-    Security.addProvider(new BouncyCastleProvider());
-    BufferedReader reader = new BufferedReader(new FileReader(decryptKey));
-    PEMParser parser = new PEMParser(reader);
-    PEMKeyPair pemKeyPair = (PEMKeyPair) parser.readObject();
-    KeyPair keyPair = new JcaPEMKeyConverter().getKeyPair(pemKeyPair);
-    parser.close();
-    reader.close();
-
-    Cipher decrypt = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-    decrypt.init(Cipher.DECRYPT_MODE, keyPair.getPrivate());
-    String decryptedMessage = new String(decrypt.doFinal(Files.readAllBytes(saltFile.toPath())), StandardCharsets.UTF_8);
-    String[] saltParts = decryptedMessage.split(SALT_FILE_DELIMITER);
-    if (saltParts == null || saltParts.length < NUM_SALT_PARTS) {
-      throw new LinkjaException("The salt file was not in the expected format.  Please confirm that you are referencing the correct file");
-    }
-
-    // At this point we have to assume that everything is in the right position, so we will load by position.
-    HashParameters parameters = new HashParameters();
-    parameters.setSiteId(saltParts[0]);
-    parameters.setSiteName(saltParts[1]);
-    parameters.setPrivateSalt(saltParts[2]);
-    parameters.setProjectSalt(saltParts[3]);
-    parameters.setProjectId(saltParts[4]);
-
-    if (parameters.getProjectSalt().length() < minSaltLength) {
-      throw new LinkjaException(String.format("The project salt must be at least %d characters long, but the one provided is %d",
-              minSaltLength, parameters.getProjectSalt().length()));
-    }
-    if (parameters.getPrivateSalt().length() < minSaltLength) {
-      throw new LinkjaException(String.format("The private (site-specific) salt must be at least %d characters long, but the one provided is %d",
-              minSaltLength, parameters.getPrivateSalt().length()));
-    }
-
-    return parameters;
   }
 }
