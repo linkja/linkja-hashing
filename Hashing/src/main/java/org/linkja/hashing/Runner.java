@@ -56,8 +56,10 @@ public class Runner {
       String outputDirectory = cmd.getOptionValue("outDirectory");
       if (outputDirectory == null || outputDirectory.equals("")) {
         Path path = FileSystems.getDefault().getPath("").toAbsolutePath();
-        System.out.printf("Results will be written to %s\r\n", path.toString());
         outputDirectory = path.toString();
+        if (parameters.isHashingMode()) {
+          System.out.printf("Results will be written to %s\r\n", outputDirectory);
+        }
       }
       parameters.setOutputDirectory(outputDirectory);
 
@@ -72,7 +74,9 @@ public class Runner {
       }
     }
     catch (Exception exc) {
-      displayCommandLineException(exc, options);
+      displayUsage();
+      System.out.println();
+      System.out.println(exc.getMessage());
       System.exit(1);
     }
 
@@ -236,7 +240,9 @@ public class Runner {
     try {
       cmd = parser.parse(options, args);
     } catch (ParseException e) {
-      displayCommandLineException(e, options);
+      displayUsage();
+      System.out.println();
+      System.out.println(e.getMessage());
       return null;
     }
 
@@ -244,15 +250,36 @@ public class Runner {
   }
 
   /**
-   * Helper method to display expected command line parameters, in response to some exception thrown
-   * @param exc Exception thrown to display
-   * @param options Expected command line options
+   * Helper method to display expected command line parameters
    */
-  public static void displayCommandLineException(Exception exc, Options options) {
-    System.out.println(exc.getMessage());
+  public static void displayUsage() {
     System.out.println();
-    HelpFormatter formatter = new HelpFormatter();
-    formatter.printHelp("Hashing", options);
+    System.out.println("Usage: java -jar Hashing.jar [--hashing | --displaySalt]");
+    System.out.println();
+    System.out.println("HASHING");
+    System.out.println("-------------");
+    System.out.println("Required parameters:");
+    System.out.println("  -h,--hashing                      Perform hashing");
+    System.out.println("  -date,--privateDate <arg>         The private date (as MM/DD/YYYY)");
+    System.out.println("  -key,--privateKey <arg>           Path to the private key file");
+    System.out.println("  -patient,--patientFile <arg>      Path to the file containing patient data");
+    System.out.println("  -salt,--saltFile <arg>            Path to encrypted salt file");
+    System.out.println();
+    System.out.println("Optional parameters:");
+    System.out.println("  -out,--outDirectory <arg>         The base directory to create output. If not");
+    System.out.println("                                    specified, will use the current directory.");
+    System.out.println("  -delim,--delimiter <arg>          The delimiter used within the patient data");
+    System.out.println("                                    file. Uses a comma \",\" by default.");
+    System.out.println("  -unhashed,--writeUnhashed         write out the original unhashed data in the ");
+    System.out.println("                                    result file (for debugging). false by default.");
+    System.out.println();
+    System.out.println("DISPLAY SALT");
+    System.out.println("-------------");
+    System.out.println("Required parameters:");
+    System.out.println("  -ds,--displaySalt                 Display the contents of the salt file");
+    System.out.println("  -key,--privateKey <arg>           Path to the private key file");
+    System.out.println("  -salt,--saltFile <arg>            Path to encrypted salt file");
+    System.out.println();
   }
 
   /**
