@@ -23,6 +23,14 @@
         <bouncycastle.version>1.61</bouncycastle.version>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>project.local</id>
+            <name>project</name>
+            <url>file:${project.basedir}/mvn-proj-repo</url>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -76,7 +84,11 @@
             <version>${bouncycastle.version}</version>
         </dependency>
 
-
+        <dependency>
+            <groupId>org.linkja</groupId>
+            <artifactId>Core</artifactId>
+            <version>1.0</version>
+        </dependency>
     </dependencies>
 
     <build>
