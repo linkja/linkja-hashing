@@ -83,10 +83,9 @@
             <artifactId>bcpkix-jdk15on</artifactId>
             <version>${bouncycastle.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.linkja</groupId>
-            <artifactId>Core</artifactId>
+            <artifactId>core</artifactId>
             <version>1.0</version>
         </dependency>
     </dependencies>

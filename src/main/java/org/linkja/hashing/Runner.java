@@ -1,16 +1,13 @@
 package org.linkja.hashing;
 
+
+import org.linkja.core.CryptoHelper;
 import org.apache.commons.cli.*;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMKeyPair;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
-import javax.crypto.Cipher;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.*;
 import java.util.Properties;
@@ -129,7 +126,7 @@ public class Runner {
 
   public static HashParameters parseProjectSalt(File saltFile, File privateKeyFile, int minSaltLength) throws Exception {
     CryptoHelper helper = new CryptoHelper();
-    String decryptedMessage = helper.decryptRSA(saltFile, privateKeyFile);
+    String decryptedMessage = new String(helper.decryptRSA(saltFile, privateKeyFile), StandardCharsets.UTF_8);
     String[] saltParts = decryptedMessage.split(SALT_FILE_DELIMITER);
     if (saltParts == null || saltParts.length < NUM_SALT_PARTS) {
       throw new LinkjaException("The salt file was not in the expected format.  Please confirm that you are referencing the correct file");

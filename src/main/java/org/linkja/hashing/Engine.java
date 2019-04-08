@@ -5,6 +5,7 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.linkja.hashing.steps.*;
+import org.linkja.core.CryptoHelper;
 
 import java.io.*;
 import java.net.URISyntaxException;
@@ -308,9 +309,7 @@ public class Engine {
           System.out.println("Preparing to encrypt hash file...");
           CryptoHelper.AESParameters aesParameters = cryptoHelper.generateAESParameters();
           cryptoHelper.encryptAES(aesParameters, hashPath.toFile(), encryptedHashDataPath.toFile());
-          cryptoHelper.rsaEncryptAES(parameters.getEncryptionKeyFile(), aesParameters, encryptedHashKeyPath);
-
-          cryptoHelper.decryptAES(aesParameters, encryptedHashDataPath.toFile(), hashPath.toFile());
+          cryptoHelper.rsaEncryptAES(aesParameters, encryptedHashKeyPath.toFile(), parameters.getEncryptionKeyFile());
           System.out.println("Hash file encrypted");
         } catch (Exception e) {
           throw new LinkjaException("There was an error when trying to encrypt the hashed output.  The unencrypted hash files have been preserved.");
