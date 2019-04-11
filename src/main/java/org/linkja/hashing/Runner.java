@@ -229,7 +229,7 @@ public class Runner {
     keyFileOpt.setRequired(true);
     options.addOption(keyFileOpt);
 
-    Option encryptionKeyFileOpt = new Option("enc", "encryptionKey", true, "path to asymmetric encryption key file to encrypt hashed output");
+    Option encryptionKeyFileOpt = new Option("enc", "encryptionKey", true, "path to public key file to encrypt hashed output");
     encryptionKeyFileOpt.setRequired(false);
     options.addOption(encryptionKeyFileOpt);
 
@@ -303,8 +303,10 @@ public class Runner {
     System.out.println("                                    specified, will use the current directory.");
     System.out.println("  -delim,--delimiter <arg>          The delimiter used within the patient data");
     System.out.println("                                    file. Uses a comma \",\" by default.");
-    System.out.println("  -unhashed,--writeUnhashed         write out the original unhashed data in the ");
+    System.out.println("  -unhashed,--writeUnhashed         Write out the original unhashed data in the ");
     System.out.println("                                    result file (for debugging). false by default.");
+    System.out.println("  -enc,--encryptionKey              Path to a public key file to then be used to ");
+    System.out.println("                                    encrypt hashed output");
     System.out.println();
     System.out.println("DISPLAY SALT");
     System.out.println("-------------");

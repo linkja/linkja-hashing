@@ -19,6 +19,10 @@ This component allows the aggregator to merge files, disambiguate the hashes and
 ## Building
 linkja-hashing was built using Java JDK 1.8 (specifically [OpenJDK](https://openjdk.java.net/)).  It can be opened from within an IDE like Eclipse or IntelliJ IDEA and compiled, or compiled from the command line using [Maven](https://maven.apache.org/).
 
+linkja-hashing currently depends on a **local** Maven repository being available that contains the [linkja-core](https://github.com/linkja/linkja-core) library.  Before building linkja-hashing, you will need to [build](https://github.com/linkja/linkja-core#building) and [deploy](https://github.com/linkja/linkja-core#deploying) linkja-core to your local Maven repository.  Note that this is only needed when the first time you are setting up and building linkja-hashing, but will also be needed any time a new version of the linkja-core code is available.  Make sure the pom.xml contains the right version of linkja-core that you want incorporated.
+
+Once that is done, you can build linkja-hashing via Maven:
+
 `mvn clean package`
 
 This will compile the code, run all unit tests, and create an executable JAR file under the .\target folder with all dependency JARs included.  The JAR will be named something like `Hashing-1.0-jar-with-dependencies.jar`.
@@ -50,8 +54,10 @@ There are additional optional parameters that you may also specify:
                                    specified, will use the current directory.
  -delim,--delimiter <arg>          The delimiter used within the patient data
                                    file. Uses a comma "," by default.
- -unhashed,--writeUnhashed         write out the original unhashed data in the 
+ -unhashed,--writeUnhashed         Write out the original unhashed data in the 
                                    result file (for debugging). false by default.
+ -enc,--encryptionKey              Path to a public key file to then be used to 
+                                   encrypt hashed output
 ```
 
 **Examples:**
