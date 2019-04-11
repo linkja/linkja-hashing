@@ -27,7 +27,7 @@
         <repository>
             <id>project.local</id>
             <name>project</name>
-            <url>file:${project.basedir}/mvn-proj-repo</url>
+            <url>file:${project.basedir}/../mvn-repo</url>
         </repository>
     </repositories>
 

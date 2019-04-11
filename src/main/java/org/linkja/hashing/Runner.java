@@ -1,7 +1,7 @@
 package org.linkja.hashing;
 
 
-import org.linkja.core.CryptoHelper;
+import org.linkja.core.*;
 import org.apache.commons.cli.*;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 

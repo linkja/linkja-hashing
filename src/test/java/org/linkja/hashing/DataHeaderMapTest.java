@@ -1,5 +1,6 @@
 package org.linkja.hashing;
 
+import org.linkja.core.*;
 import org.junit.jupiter.api.Test;
 import org.mockito.internal.util.reflection.FieldSetter;
 
