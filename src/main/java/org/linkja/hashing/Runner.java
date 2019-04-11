@@ -1,16 +1,13 @@
 package org.linkja.hashing;
 
+
+import org.linkja.core.*;
 import org.apache.commons.cli.*;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMKeyPair;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
-import javax.crypto.Cipher;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.*;
 import java.util.Properties;
@@ -32,6 +29,9 @@ public class Runner {
 
     long startTime = System.nanoTime();
 
+    // Perform some initialization - purposefully done after timing has started.
+    Security.addProvider(new BouncyCastleProvider());
+
     // There are two modes under which our program can run - hashing and displaySalt.  Depending on which of these
     // modes is set, we have different requirements for other parameters.
     //
@@ -49,6 +49,7 @@ public class Runner {
       parameters.setSaltFile(cmd.getOptionValue("saltFile"));
       parameters.setPatientFile(cmd.getOptionValue("patientFile"));
       parameters.setPrivateDate(cmd.getOptionValue("privateDate"));
+      parameters.setEncryptionKeyFile(cmd.getOptionValue("encryptionKey"));
       parameters.setDelimiter(cmd.getOptionValue("delimiter", new String(new char[] { EngineParameters.DEFAULT_DELIMITER })));
       parameters.setRecordExclusionMode(parseRecordExclusionMode(cmd.getOptionValue("exclusionMode")));
       parameters.setWriteUnhashedData(cmd.hasOption("writeUnhashed"));
@@ -121,6 +122,34 @@ public class Runner {
 
     double elapsedSeconds = (double)(endTime - startTime) / 1_000_000_000.0;
     System.out.printf("Total execution time: %2f sec\n", elapsedSeconds);
+  }
+
+  public static HashParameters parseProjectSalt(File saltFile, File privateKeyFile, int minSaltLength) throws Exception {
+    CryptoHelper helper = new CryptoHelper();
+    String decryptedMessage = new String(helper.decryptRSA(saltFile, privateKeyFile), StandardCharsets.UTF_8);
+    String[] saltParts = decryptedMessage.split(SALT_FILE_DELIMITER);
+    if (saltParts == null || saltParts.length < NUM_SALT_PARTS) {
+      throw new LinkjaException("The salt file was not in the expected format.  Please confirm that you are referencing the correct file");
+    }
+
+    // At this point we have to assume that everything is in the right position, so we will load by position.
+    HashParameters parameters = new HashParameters();
+    parameters.setSiteId(saltParts[0]);
+    parameters.setSiteName(saltParts[1]);
+    parameters.setPrivateSalt(saltParts[2]);
+    parameters.setProjectSalt(saltParts[3]);
+    parameters.setProjectId(saltParts[4]);
+
+    if (parameters.getProjectSalt().length() < minSaltLength) {
+      throw new LinkjaException(String.format("The project salt must be at least %d characters long, but the one provided is %d",
+              minSaltLength, parameters.getProjectSalt().length()));
+    }
+    if (parameters.getPrivateSalt().length() < minSaltLength) {
+      throw new LinkjaException(String.format("The private (site-specific) salt must be at least %d characters long, but the one provided is %d",
+              minSaltLength, parameters.getPrivateSalt().length()));
+    }
+
+    return parameters;
   }
 
   /**
@@ -199,6 +228,10 @@ public class Runner {
     Option keyFileOpt = new Option("key", "privateKey", true, "path to private key file");
     keyFileOpt.setRequired(true);
     options.addOption(keyFileOpt);
+
+    Option encryptionKeyFileOpt = new Option("enc", "encryptionKey", true, "path to asymmetric encryption key file to encrypt hashed output");
+    encryptionKeyFileOpt.setRequired(false);
+    options.addOption(encryptionKeyFileOpt);
 
     Option saltFileOpt = new Option("salt", "saltFile", true, "path to encrypted salt file");
     saltFileOpt.setRequired(true);
@@ -280,50 +313,5 @@ public class Runner {
     System.out.println("  -key,--privateKey <arg>           Path to the private key file");
     System.out.println("  -salt,--saltFile <arg>            Path to encrypted salt file");
     System.out.println();
-  }
-
-  /**
-   * Given an encrypted salt file, and a private decryption key, get out the hashing parameters that include site and
-   * project details.  Note that the HashParameters are considered sensitive information, because they are encrypted.
-   * @param saltFile
-   * @param decryptKey
-   * @return
-   * @throws Exception
-   */
-  public static HashParameters parseProjectSalt(File saltFile, File decryptKey, int minSaltLength) throws Exception {
-    Security.addProvider(new BouncyCastleProvider());
-    BufferedReader reader = new BufferedReader(new FileReader(decryptKey));
-    PEMParser parser = new PEMParser(reader);
-    PEMKeyPair pemKeyPair = (PEMKeyPair) parser.readObject();
-    KeyPair keyPair = new JcaPEMKeyConverter().getKeyPair(pemKeyPair);
-    parser.close();
-    reader.close();
-
-    Cipher decrypt = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-    decrypt.init(Cipher.DECRYPT_MODE, keyPair.getPrivate());
-    String decryptedMessage = new String(decrypt.doFinal(Files.readAllBytes(saltFile.toPath())), StandardCharsets.UTF_8);
-    String[] saltParts = decryptedMessage.split(SALT_FILE_DELIMITER);
-    if (saltParts == null || saltParts.length < NUM_SALT_PARTS) {
-      throw new LinkjaException("The salt file was not in the expected format.  Please confirm that you are referencing the correct file");
-    }
-
-    // At this point we have to assume that everything is in the right position, so we will load by position.
-    HashParameters parameters = new HashParameters();
-    parameters.setSiteId(saltParts[0]);
-    parameters.setSiteName(saltParts[1]);
-    parameters.setPrivateSalt(saltParts[2]);
-    parameters.setProjectSalt(saltParts[3]);
-    parameters.setProjectId(saltParts[4]);
-
-    if (parameters.getProjectSalt().length() < minSaltLength) {
-      throw new LinkjaException(String.format("The project salt must be at least %d characters long, but the one provided is %d",
-              minSaltLength, parameters.getProjectSalt().length()));
-    }
-    if (parameters.getPrivateSalt().length() < minSaltLength) {
-      throw new LinkjaException(String.format("The private (site-specific) salt must be at least %d characters long, but the one provided is %d",
-              minSaltLength, parameters.getPrivateSalt().length()));
-    }
-
-    return parameters;
   }
 }

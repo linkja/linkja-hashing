@@ -5,6 +5,7 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.linkja.hashing.steps.*;
+import org.linkja.core.*;
 
 import java.io.*;
 import java.net.URISyntaxException;
@@ -51,6 +52,7 @@ public class Engine {
   private static ArrayList<String> prefixes = null;
   private static ArrayList<String> suffixes = null;
   private static HashMap<String, String> genericNames = null;
+  private CryptoHelper cryptoHelper = new CryptoHelper();
 
   private int numSubmittedJobs = 0;
   private int numCompletedJobs = 0;
@@ -208,6 +210,17 @@ public class Engine {
       combinedHashedUnhashedPrinter = createCombinedHashedUnhashedPrinter(combinedHashedUnhashedWriter);
     }
 
+    Path encryptedHashKeyPath = null;
+    Path encryptedHashDataPath = null;
+    if (parameters.isEncryptingOutput()) {
+      encryptedHashKeyPath = Paths.get(this.parameters.getOutputDirectory().toString(),
+              String.format("encHashKeyFile_%s_%s_%s.txt", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp));
+      encryptedHashDataPath = Paths.get(this.parameters.getOutputDirectory().toString(),
+              String.format("enc_hashes_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp));
+    }
+
+    Path[] allFilePaths = new Path[] { hashPath, crosswalkPath, invalidDataPath, combinedHashedUnhashedPath, encryptedHashKeyPath };
+
     // Reset all of our tracking counters right before we begin the processing cycle
     this.numSubmittedJobs = 0;
     this.numCompletedJobs = 0;
@@ -226,7 +239,7 @@ public class Engine {
       if (!patientId.equals("")) {
         if (uniquePatientIds.contains(patientId)) {
           closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
-          deleteOutputFiles(hashPath, crosswalkPath, invalidDataPath, combinedHashedUnhashedPath);
+          deleteOutputFiles(allFilePaths);
           threadPool.shutdownNow();
           throw new LinkjaException(String.format("Patient IDs must be unique within the data file.  A duplicate copy of Patient ID %s was found on row %d.",
                   patientId.trim(), csvRecord.getRecordNumber()));
@@ -260,7 +273,7 @@ public class Engine {
             // rely on our results.
             threadPool.shutdownNow();
             closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
-            deleteOutputFiles(hashPath, crosswalkPath, invalidDataPath, combinedHashedUnhashedPath);
+            deleteOutputFiles(allFilePaths);
             return;
           }
 
@@ -291,9 +304,23 @@ public class Engine {
       executionReport.add(String.format("     %d original data rows hashed", (totalHashedRows - this.numDerivedRows)));
       executionReport.add(String.format("     %d derived rows hashed", this.numDerivedRows));
       executionReport.add(String.format("  %d invalid rows", this.numInvalidRows));
+
+      // If we are encrypting the hashed results, do that now
+      if (parameters.isEncryptingOutput()) {
+        try {
+          System.out.println("Preparing to encrypt hash file...");
+          CryptoHelper.AESParameters aesParameters = cryptoHelper.generateAESParameters();
+          cryptoHelper.encryptAES(aesParameters, hashPath.toFile(), encryptedHashDataPath.toFile());
+          cryptoHelper.rsaEncryptAES(aesParameters, encryptedHashKeyPath.toFile(), parameters.getEncryptionKeyFile());
+          System.out.println("Hash file encrypted");
+          deleteOutputFiles(new Path[] { hashPath });  // Remove the original decrypted hash file
+        } catch (Exception e) {
+          throw new LinkjaException("There was an error when trying to encrypt the hashed output.  The unencrypted hash files have been preserved.");
+        }
+      }
     }
     else {
-      deleteOutputFiles(hashPath, crosswalkPath, invalidDataPath, combinedHashedUnhashedPath);
+      deleteOutputFiles(allFilePaths);
     }
 
     threadPool.shutdown();
@@ -302,24 +329,18 @@ public class Engine {
   /**
    * Delete all output files that were established.  This is a helper method, so it assumes we know the files are there
    * and can be deleted.
-   * @param hashPath
-   * @param crosswalkPath
-   * @param invalidDataPath
-   * @param combinedHashedUnhashedPath
+   * @param paths
    * @throws IOException
    */
-  private void deleteOutputFiles(Path hashPath, Path crosswalkPath, Path invalidDataPath, Path combinedHashedUnhashedPath) throws IOException {
-    if (hashPath != null) {
-      Files.delete(hashPath);
+  private void deleteOutputFiles(Path[] paths) throws IOException {
+    if (paths == null || paths.length == 0) {
+      return;
     }
-    if (crosswalkPath != null) {
-      Files.delete(crosswalkPath);
-    }
-    if (invalidDataPath != null) {
-      Files.delete(invalidDataPath);
-    }
-    if (combinedHashedUnhashedPath != null) {
-      Files.delete(combinedHashedUnhashedPath);
+
+    for(Path path : paths) {
+      if (path != null) {
+        Files.delete(path);
+      }
     }
   }
 

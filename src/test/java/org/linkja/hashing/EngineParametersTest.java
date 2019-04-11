@@ -3,6 +3,7 @@ package org.linkja.hashing;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import org.linkja.core.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.nio.file.Path;
@@ -113,6 +114,61 @@ class EngineParametersTest {
     assertNull(parameters.getPatientFile());
     parameters.setPatientFile("");
     assertNull(parameters.getPatientFile());
+  }
+
+  @Test
+  void setEncryptionKeyFile_Found() throws FileNotFoundException {
+    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
+    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> true);
+
+    EngineParameters parameters = new EngineParameters(fileHelperMock);
+    File file = new File("/test/path/assumed/valid");
+    parameters.setEncryptionKeyFile(file);
+    assertEquals(file.getPath(), parameters.getEncryptionKeyFile().getPath());
+
+    // Test with string parameter
+    String filePath = file.getPath();
+    parameters.setEncryptionKeyFile(filePath);
+    assertEquals(filePath, parameters.getEncryptionKeyFile().getPath());
+  }
+
+  @Test
+  void setEncryptionKeyFile_NotFound() {
+    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
+    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> false);
+
+    EngineParameters parameters = new EngineParameters(fileHelperMock);
+    File file = new File("/test/path/assumed/invalid");
+    assertThrows(FileNotFoundException.class, () -> parameters.setEncryptionKeyFile(file));
+
+    String filePath = "/test/path/assumed/invalid";
+    assertThrows(FileNotFoundException.class, () -> parameters.setEncryptionKeyFile(filePath));
+  }
+
+  @Test
+  void setEncryptionKeyFile_NullEmpty() throws FileNotFoundException {
+    EngineParameters parameters = new EngineParameters();
+    assertNull(parameters.getEncryptionKeyFile());
+    parameters.setEncryptionKeyFile((File)null);
+    assertNull(parameters.getEncryptionKeyFile());
+    parameters.setEncryptionKeyFile((String)null);
+    assertNull(parameters.getEncryptionKeyFile());
+    parameters.setEncryptionKeyFile("");
+    assertNull(parameters.getEncryptionKeyFile());
+  }
+
+  @Test
+  void isEncryptingOutput() throws FileNotFoundException {
+    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
+    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> true);
+
+    EngineParameters parameters = new EngineParameters(fileHelperMock);
+    assertFalse(parameters.isEncryptingOutput());
+    File file = new File("/test/path/assumed/valid");
+    parameters.setEncryptionKeyFile(file);
+    assertTrue(parameters.isEncryptingOutput());
+    parameters.setEncryptionKeyFile((File)null);
+    assertFalse(parameters.isEncryptingOutput());
   }
 
   @Test

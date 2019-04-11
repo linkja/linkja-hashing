@@ -1,5 +1,6 @@
 package org.linkja.hashing;
 
+import org.linkja.core.*;
 import java.util.*;
 
 /**

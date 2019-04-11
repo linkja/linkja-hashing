@@ -2,7 +2,7 @@ package org.linkja.hashing.steps;
 
 import org.linkja.hashing.DataRow;
 import org.linkja.hashing.Engine;
-import org.linkja.hashing.LinkjaException;
+import org.linkja.core.LinkjaException;
 
 import java.util.HashMap;
 import java.util.Map;

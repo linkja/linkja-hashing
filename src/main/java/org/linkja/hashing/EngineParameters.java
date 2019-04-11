@@ -1,5 +1,6 @@
 package org.linkja.hashing;
 
+import org.linkja.core.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.nio.file.Path;
@@ -33,6 +34,7 @@ public class EngineParameters {
   public static final DateTimeFormatter PrivateDateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
   private File privateKeyFile;
+  private File encryptionKeyFile;
   private File saltFile;
   private File patientFile;
   private LocalDate privateDate;
@@ -102,6 +104,34 @@ public class EngineParameters {
   public void setPrivateKeyFile(String privateKeyFile) throws FileNotFoundException {
     File file = new File(privateKeyFile);
     setPrivateKeyFile(file);
+  }
+
+  public File getEncryptionKeyFile() {
+    return encryptionKeyFile;
+  }
+
+  public void setEncryptionKeyFile(File encryptionKeyFile) throws FileNotFoundException {
+    if (encryptionKeyFile != null && !fileHelper.exists(encryptionKeyFile)) {
+      throw new FileNotFoundException(String.format("Unable to find encryption key file %s", encryptionKeyFile.toString()));
+    }
+    this.encryptionKeyFile = encryptionKeyFile;
+  }
+
+  public void setEncryptionKeyFile(String encryptionKeyFile) throws FileNotFoundException {
+    if (encryptionKeyFile == null || encryptionKeyFile.equals("")) {
+      setEncryptionKeyFile((File)null);
+      return;
+    }
+    File file = new File(encryptionKeyFile);
+    setEncryptionKeyFile(file);
+  }
+
+  /**
+   * Helper function to tell us if we should encrypt the hashing results or not.
+   * @return
+   */
+  public boolean isEncryptingOutput() {
+    return this.encryptionKeyFile != null;
   }
 
   public File getSaltFile() {

@@ -3,10 +3,8 @@ package org.linkja.hashing;
 import org.junit.jupiter.api.Test;
 import org.mockito.internal.util.reflection.FieldSetter;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
+import org.linkja.core.*;
 import java.util.HashMap;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 

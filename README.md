@@ -1,4 +1,4 @@
-# linkja
+# linkja-hashing
 
 The data linkage application is designed to disambiguate patients across sites / health systems, with minimal risk from transferring PHI by hashing the patient identifiers with a secured salt and hashing algorithm. Main Components of the application are:
 1.	Web based Project, User and Key Manager

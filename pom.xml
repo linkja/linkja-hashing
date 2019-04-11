@@ -23,6 +23,14 @@
         <bouncycastle.version>1.61</bouncycastle.version>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>project.local</id>
+            <name>project</name>
+            <url>file:${project.basedir}/../mvn-repo</url>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -75,8 +83,11 @@
             <artifactId>bcpkix-jdk15on</artifactId>
             <version>${bouncycastle.version}</version>
         </dependency>
-
-
+        <dependency>
+            <groupId>org.linkja</groupId>
+            <artifactId>core</artifactId>
+            <version>1.0</version>
+        </dependency>
     </dependencies>
 
     <build>

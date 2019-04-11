@@ -1,7 +1,7 @@
 package org.linkja.hashing.steps;
 
 import org.linkja.hashing.DataRow;
-import org.linkja.hashing.LinkjaException;
+import org.linkja.core.LinkjaException;
 
 /**
  * The Step interface defines a generic process that is run against a DataRow.
