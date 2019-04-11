@@ -1,0 +1,36 @@
+alias_name,canonical_name
+id,patient_id
+patient_id,patient_id
+"patient id",patient_id
+patientid,patient_id
+patient-id,patient_id
+first_name,first_name
+"first name",first_name
+first-name,first_name
+firstname,first_name
+fname,first_name
+f_name,first_name
+f-name,first_name
+"f name",first_name
+last_name,last_name
+"last name",last_name
+last-name,last_name
+lastname,last_name
+lname,last_name
+l_name,last_name
+l-name,last_name
+"l name",last_name
+date_of_birth,date_of_birth
+dob,date_of_birth
+dateofbirth,date_of_birth
+date-of-birth,date_of_birth
+"date of birth",date_of_birth
+birthdate,date_of_birth
+birth_date,date_of_birth
+birth-date,date_of_birth
+birthday,date_of_birth
+social_security_number,social_security_number
+ssn,social_security_number
+soc_sec_num,social_security_number
+"soc sec num",social_security_number
+exclusion,exclusion
