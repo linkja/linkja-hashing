@@ -6,7 +6,7 @@
 
     <groupId>org.linkja</groupId>
     <artifactId>Hashing</artifactId>
-    <version>0.4.1</version>
+    <version>0.4.2</version>
 
     <properties>
         <main.runnable.class>org.linkja.hashing.Runner</main.runnable.class>
@@ -23,11 +23,17 @@
         <bouncycastle.version>1.61</bouncycastle.version>
     </properties>
 
+
     <repositories>
         <repository>
-            <id>project.local</id>
-            <name>project</name>
-            <url>file:${project.basedir}/../mvn-repo</url>
+            <id>linkja-mvn-repo</id>
+            <url>https://raw.github.com/linkja/linkja-mvn-repo/master</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
     </repositories>
 
@@ -85,8 +91,8 @@
         </dependency>
         <dependency>
             <groupId>org.linkja</groupId>
-            <artifactId>core</artifactId>
-            <version>1.0</version>
+            <artifactId>linkja-core</artifactId>
+            <version>1.0.0</version>
         </dependency>
     </dependencies>
 
