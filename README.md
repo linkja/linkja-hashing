@@ -19,9 +19,7 @@ This component allows the aggregator to merge files, disambiguate the hashes and
 ## Building
 linkja-hashing was built using Java JDK 1.8 (specifically [OpenJDK](https://openjdk.java.net/)).  It can be opened from within an IDE like Eclipse or IntelliJ IDEA and compiled, or compiled from the command line using [Maven](https://maven.apache.org/).
 
-linkja-hashing currently depends on a **local** Maven repository being available that contains the [linkja-core](https://github.com/linkja/linkja-core) library.  Before building linkja-hashing, you will need to [build](https://github.com/linkja/linkja-core#building) and [deploy](https://github.com/linkja/linkja-core#deploying) linkja-core to your local Maven repository.  Note that this is only needed when the first time you are setting up and building linkja-hashing, but will also be needed any time a new version of the linkja-core code is available.  Make sure the pom.xml contains the right version of linkja-core that you want incorporated.
-
-Once that is done, you can build linkja-hashing via Maven:
+You can build linkja-hashing via Maven:
 
 `mvn clean package`
 
