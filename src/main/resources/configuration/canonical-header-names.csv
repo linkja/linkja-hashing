@@ -12,6 +12,7 @@ fname,first_name
 f_name,first_name
 f-name,first_name
 "f name",first_name
+first,first_name
 last_name,last_name
 "last name",last_name
 last-name,last_name
@@ -20,6 +21,7 @@ lname,last_name
 l_name,last_name
 l-name,last_name
 "l name",last_name
+last,last_name
 date_of_birth,date_of_birth
 dob,date_of_birth
 dateofbirth,date_of_birth
@@ -34,3 +36,4 @@ ssn,social_security_number
 soc_sec_num,social_security_number
 "soc sec num",social_security_number
 exclusion,exclusion
+EnterpriseID,patient_id
