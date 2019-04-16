@@ -314,7 +314,6 @@ public class Engine {
             cryptoHelper.encryptAES(aesParameters, hashPath.toFile(), encryptedHashDataPath.toFile());
             cryptoHelper.rsaEncryptAES(aesParameters, encryptedHashKeyPath.toFile(), parameters.getEncryptionKeyFile());
             System.out.println("Hash file encrypted");
-            deleteOutputFiles(new Path[] { hashPath });  // Remove the original decrypted hash file
           } catch (Exception e) {
             throw new LinkjaException("There was an error when trying to encrypt the hashed output.  The unencrypted hash files have been preserved.");
           }
