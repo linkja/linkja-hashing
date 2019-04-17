@@ -269,7 +269,7 @@ public class Engine {
           // wanted to have running.  If so, we'll start clearing up results (if they are done) and writing them up, which
           // will keep memory usage manageable.
           while (((ThreadPoolExecutor) threadPool).getActiveCount() >= numThreads) {
-            if (!processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter)) {
+            if (!processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter, false)) {
               // If there was a problem during the middle of the processing cycle, we have to stop work since we can't
               // rely on our results.
               threadPool.shutdownNow();
@@ -277,11 +277,7 @@ public class Engine {
               deleteOutputFiles(allFilePaths);
               return;
             }
-
-            // We will sleep briefly just so we're not churning waiting for work to finish.
-            Thread.sleep(500);
           }
-
         }
       }
 
@@ -294,7 +290,7 @@ public class Engine {
         this.numSubmittedJobs++;
       }
 
-      boolean finalProcessSucceeded = processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter);
+      boolean finalProcessSucceeded = processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter, true);
       closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
 
       if (finalProcessSucceeded) {
@@ -325,6 +321,12 @@ public class Engine {
 
       threadPool.shutdown();
 
+      // Ensure at this point (as a final sanity check) that all of our submitted jobs have been tracked to completion
+      if (this.numCompletedJobs != this.numSubmittedJobs) {
+        throw new LinkjaException(String.format("We are missing %d jobs - expected %d, tracked %d to completion.\r\nThe unencrypted hash files have been preserved, but are incomplete.",
+                (this.numSubmittedJobs - this.numCompletedJobs), this.numSubmittedJobs, this.numCompletedJobs));
+      }
+
     }
   }
 
@@ -352,24 +354,36 @@ public class Engine {
    * @param hashPrinter
    * @param crosswalkPrinter
    * @param invalidDataPrinter
+   * @param waitUntilComplete
    * @return true if the work was processed, false if there was an error
    */
   private boolean processPendingWork(ExecutorCompletionService<List<DataRow>> taskQueue, CSVPrinter hashPrinter,
-                                     CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter, CSVPrinter combinedHashedUnhashedPrinter) {
+                                     CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter, CSVPrinter combinedHashedUnhashedPrinter,
+                                     boolean waitUntilComplete) {
     try {
-      // If we have completed all of the submitted jobs, we are all done.  If we have some outstanding, we are going to
-      // set a polling timeout.
-      if (this.numCompletedJobs == this.numSubmittedJobs) {
-        System.out.println("All jobs have been processed");
-        return true;
-      }
+      // Go through at least once to check the status of our jobs and process pending results.  If the flag has been
+      // set to wait until everything is completed, we will stay in a loop checking for completed work.
+      do {
+        // If we have completed all of the submitted jobs, we are all done.  If we have some outstanding, we are going to
+        // set a polling timeout.
+        if (this.numCompletedJobs == this.numSubmittedJobs) {
+          System.out.println("All jobs have been processed");
+          return true;
+        }
 
-      Future<List<DataRow>> task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
-      while (task != null) {
-        writeDataRowResults(task.get(), hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter);
-        this.numCompletedJobs++;
-        task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
-      }
+        Future<List<DataRow>> task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
+        while (task != null) {
+          writeDataRowResults(task.get(), hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter);
+          this.numCompletedJobs++;
+          task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
+        }
+
+        // We will sleep briefly just so we're not churning waiting for work to finish.
+        if (waitUntilComplete) {
+          System.out.println("Waiting for all working threads to complete...");
+          Thread.sleep(1000);
+        }
+      } while (waitUntilComplete);
     }
     catch (Exception exc) {
       executionReport.add("An exception was thrown while writing out the results.  The output file is incomplete and should not be used.");
