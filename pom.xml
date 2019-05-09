@@ -92,7 +92,7 @@
         <dependency>
             <groupId>org.linkja</groupId>
             <artifactId>linkja-core</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.2</version>
         </dependency>
     </dependencies>
 
