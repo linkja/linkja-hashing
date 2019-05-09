@@ -14,9 +14,6 @@ import java.util.Properties;
 
 // TODO: Write unit tests for helper methods (everything but main)
 public class Runner {
-  private static String SALT_FILE_DELIMITER = ",";
-  private static int NUM_SALT_PARTS = 5;
-
   public static void main(String[] args) {
     Options options = setUpCommandLine();
     CommandLine cmd = parseCommandLine(options, args);
@@ -125,30 +122,16 @@ public class Runner {
   }
 
   public static HashParameters parseProjectSalt(File saltFile, File privateKeyFile, int minSaltLength) throws Exception {
-    CryptoHelper helper = new CryptoHelper();
-    String decryptedMessage = new String(helper.decryptRSA(saltFile, privateKeyFile), StandardCharsets.UTF_8);
-    String[] saltParts = decryptedMessage.split(SALT_FILE_DELIMITER);
-    if (saltParts == null || saltParts.length < NUM_SALT_PARTS) {
-      throw new LinkjaException("The salt file was not in the expected format.  Please confirm that you are referencing the correct file");
-    }
+    SaltFile file = new SaltFile();
+    file.setMinSaltLength(minSaltLength);
+    file.decrypt(saltFile, privateKeyFile);
 
-    // At this point we have to assume that everything is in the right position, so we will load by position.
     HashParameters parameters = new HashParameters();
-    parameters.setSiteId(saltParts[0]);
-    parameters.setSiteName(saltParts[1]);
-    parameters.setPrivateSalt(saltParts[2]);
-    parameters.setProjectSalt(saltParts[3]);
-    parameters.setProjectId(saltParts[4]);
-
-    if (parameters.getProjectSalt().length() < minSaltLength) {
-      throw new LinkjaException(String.format("The project salt must be at least %d characters long, but the one provided is %d",
-              minSaltLength, parameters.getProjectSalt().length()));
-    }
-    if (parameters.getPrivateSalt().length() < minSaltLength) {
-      throw new LinkjaException(String.format("The private (site-specific) salt must be at least %d characters long, but the one provided is %d",
-              minSaltLength, parameters.getPrivateSalt().length()));
-    }
-
+    parameters.setSiteId(file.getSiteID());
+    parameters.setSiteName(file.getSiteName());
+    parameters.setPrivateSalt(file.getPrivateSalt());
+    parameters.setProjectSalt(file.getProjectSalt());
+    parameters.setProjectId(file.getProjectName());
     return parameters;
   }
 
