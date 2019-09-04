@@ -5,22 +5,26 @@ import org.linkja.hashing.DataRow;
 import org.linkja.hashing.Engine;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.Optional;
 
 public class ValidationFilterStep implements IStep {
+  /**
+   * Validation of date/time formats.  Note that because we are using the STRICT resolver, we need to use the Java 8
+   * notation of year ('uuuu' instead of 'yyyy').
+   */
   public static final DateTimeFormatter DATE_OF_BIRTH_FORMATTER = DateTimeFormatter.ofPattern(""
-          + "[yyyy/M/d[ H:mm[:ss]]]"
-          + "[yyyy-M-d[ H:mm[:ss]]]"
-          + "[yyyy M d[ H:mm[:ss]]]"
-          + "[yyyyMMdd[ H:mm[:ss]]]"
-          + "[M/d/yyyy[ H:mm[:ss]]]"
-          + "[M-d-yyyy[ H:mm[:ss]]]"
-          + "[M d yyyy[ H:mm[:ss]]]"
-          + "[MMddyyyy[ H:mm[:ss]]]"
-  );
+          + "[uuuu/M/d[ H:mm[:ss]]]"
+          + "[uuuu-M-d[ H:mm[:ss]]]"
+          + "[uuuu M d[ H:mm[:ss]]]"
+          + "[uuuuMMdd[ H:mm[:ss]]]"
+          + "[M/d/uuuu[ H:mm[:ss]]]"
+          + "[M-d-uuuu[ H:mm[:ss]]]"
+          + "[M d uuuu[ H:mm[:ss]]]"
+          + "[MMdduuuu[ H:mm[:ss]]]"
+  ).withResolverStyle(ResolverStyle.STRICT);
 
   @Override
   public DataRow run(DataRow row) {

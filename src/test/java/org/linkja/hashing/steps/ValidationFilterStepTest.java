@@ -292,6 +292,7 @@ class ValidationFilterStepTest {
     assert(step.isValidDate("2019/3/2"));    // yyyy/M/d
     assert(step.isValidDate("2019 3 2"));    // yyyy M d
     assert(step.isValidDate("20190302"));    // yyyyMMdd
+    assert(step.isValidDate("02/29/2016"));      // Valid leap year
   }
 
   @Test
@@ -301,21 +302,23 @@ class ValidationFilterStepTest {
     assert(step.isValidDate("3/2/2019 15:30"));       // M/d/yyyy HH:mm
     assert(step.isValidDate("3-2-2019 03:30"));       // M-d-yyyy HH:mm
     assert(step.isValidDate("2019-3-2 07:15:32"));    // yyyy-M-d HH:mm:ss
-    assert(step.isValidDate("7/4/1930 0:00"));        //M/d/yyyy H:mm
-
+    assert(step.isValidDate("7/4/1930 0:00"));        // M/d/yyyy H:mm
+    assert(step.isValidDate("02/29/2016 00:00"));     // Valid leap year
   }
 
   @Test
   void isValidDate_DateInvalid() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assertFalse(step.isValidDate("Nov 05 2019"));
-    assertFalse(step.isValidDate("05/2019"));
+    assertFalse(step.isValidDate("Nov 05 2019"));     // Not a format we support
+    assertFalse(step.isValidDate("05/2019"));         // Missing one of the elements
+    assertFalse(step.isValidDate("02/29/2019"));      // Not a valid leap year
   }
 
   @Test
   void isValidDate_DateTimeInvalid() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assertFalse(step.isValidDate("11/05/2019 25:15"));
-    assertFalse(step.isValidDate("05/05/2019 5:5:5"));
+    assertFalse(step.isValidDate("11/05/2019 25:15")); // Not a valid time
+    assertFalse(step.isValidDate("05/05/2019 5:5:5")); // Not a valid format
+    assertFalse(step.isValidDate("02/29/2019 05:15")); // Not a valid leap year
   }
 }
