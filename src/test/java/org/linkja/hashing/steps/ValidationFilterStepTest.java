@@ -312,6 +312,8 @@ class ValidationFilterStepTest {
     assertFalse(step.isValidDate("Nov 05 2019"));     // Not a format we support
     assertFalse(step.isValidDate("05/2019"));         // Missing one of the elements
     assertFalse(step.isValidDate("02/29/2019"));      // Not a valid leap year
+    assertFalse(step.isValidDate("4/35/2019"));       // Not a valid day in April
+    assertFalse(step.isValidDate("14/22/2019"));      // Not a valid month
   }
 
   @Test
