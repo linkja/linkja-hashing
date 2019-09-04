@@ -223,7 +223,9 @@ class NormalizationStepTest {
     row.put(Engine.FIRST_NAME_FIELD, "MR. JOHN 17");
     row = step.run(row);
     assertEquals("JOHN", row.get(Engine.FIRST_NAME_FIELD));
-
+    row.put(Engine.FIRST_NAME_FIELD, "MR. 12345");
+    row = step.run(row);
+    assertEquals("", row.get(Engine.FIRST_NAME_FIELD));
 
     row.put(Engine.FIRST_NAME_FIELD, "JOHN PAUL");
     row = step.run(row);
