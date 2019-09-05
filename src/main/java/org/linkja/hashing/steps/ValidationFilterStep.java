@@ -8,7 +8,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
+import java.util.Arrays;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 public class ValidationFilterStep implements IStep {
   /**
@@ -25,6 +27,35 @@ public class ValidationFilterStep implements IStep {
           + "[M d uuuu[ H:mm[:ss]]]"
           + "[MMdduuuu[ H:mm[:ss]]]"
   ).withResolverStyle(ResolverStyle.STRICT);
+
+  // This is a specific SSN that is of appropriate length, but is considered an invalid placeholder and should be
+  // removed
+  public static final String INVALID_SSN = "0000";
+
+  /**
+   * Regex to determine if SSN is valid
+   * Adapted from 4.12. Validate Social Security Numbers, in "Regular Expressions Cookbook, 2nd Edition" with the
+   * following changes:
+   *  - Allow 900-999 (TINs)
+   *  - Allow hyphen or space delimiters
+   */
+  //public Pattern DelimitedSSNRegex = Pattern.compile("^(?!000)[0-9]{0,3}[- ]?(?!00)[0-9]{0,2}[- ]?(?!0000)[0-9]{4}$");
+  public Pattern SSNRegex = Pattern.compile("^(?!000)[0-9]{0,3}[- ]?(?!00)[0-9]{0,2}[- ]?(?!0000)[0-9]{4}$");
+
+  /**
+   * Secondary regex to check if SSN is valid - assumes delimiters have been stripped.
+   */
+  //public Pattern SSNRegex = Pattern.compile("^[0-9]{4,9}$");
+
+  public static final int MIN_SSN_LENGTH = 4;
+
+  /**
+   * SSNs that are considered invalid because they have been used in advertisements.
+   * These must be formatted as 9 digits with no delimiters
+   */
+  public static final String[] BLACKLISTED_SSNS = new String[] {
+    "078051120"
+  };
 
   @Override
   public DataRow run(DataRow row) {
@@ -130,12 +161,69 @@ public class ValidationFilterStep implements IStep {
       formatBuilder.append("Date of Birth (recommended to use MM/DD/YYYY format), ");
       hasFormatError = true;
     }
+    if (row.containsKey(Engine.SOCIAL_SECURITY_NUMBER) && !isValidSSN(row.get(Engine.SOCIAL_SECURITY_NUMBER))) {
+      formatBuilder.append("Social Security Number, ");
+      hasFormatError = true;
+    }
 
     if (hasFormatError) {
       row.setInvalidReason(safeAppendInvalidReason(row, formatBuilder.toString()));
     }
 
     return row;
+  }
+
+  /**
+   * Because the SSN field is optional, this check will ensure that we are only doing a validation check when it is
+   * appropriate.  Note that if we shouldn't validate the SSN, it should be explicitly blanked out later on.  This is
+   * not the responsibility of the validation step to do, however.
+   * @param ssnString
+   * @return
+   */
+  public boolean shouldValidateSSN(String ssnString) {
+    return (ssnString != null) && (!ssnString.trim().equals(""));
+  }
+
+  /**
+   * Determine if a string representing an SSN is valid or not.  Note that we are lumping TINs in with SSNs, although
+   * they are slightly different.
+   * @param ssnString
+   * @return
+   */
+  public boolean isValidSSN(String ssnString) {
+    if (!shouldValidateSSN(ssnString)) {
+      return true;
+    }
+
+    String strippedSSN = ssnString.trim().replaceAll("[\\- ]", "");
+    if (strippedSSN.length() < MIN_SSN_LENGTH) {
+      return false;
+    }
+
+    // If it's beyond 9 characters, something is wrong - either too many digits or invalid delimiters.  Regardless,
+    // we're done checking at this point.
+    if (strippedSSN.length() > 9) {
+      return false;
+    }
+    // If it's 9 digits long, we need to check against our blacklist
+    else if (strippedSSN.length() == 9) {
+      boolean blacklisted = Arrays.stream(BLACKLISTED_SSNS).anyMatch(x -> x.equals(strippedSSN));
+      if (blacklisted) {
+        return false;
+      }
+
+      // One edge condition not covered in our regex is starting with 666-**-****
+      if (strippedSSN.startsWith("666")) {
+        return false;
+      }
+    }
+
+//    if (!DelimitedSSNRegex.matcher(ssnString).matches()) {
+//      return false;
+//    }
+
+    // At this point, it should be 4-9 digits
+    return SSNRegex.matcher(strippedSSN).matches();
   }
 
   /**

@@ -10,13 +10,7 @@ import java.util.ArrayList;
 import java.util.Map;
 
 public class NormalizationStep implements IStep {
-  public static final int MIN_SSN_LENGTH = 4;
-
   public static final DateTimeFormatter NORMALIZED_DATE_OF_BIRTH_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-  // This is a specific SSN that is of appropriate length, but is considered an invalid placeholder and should be
-  // removed
-  public static final String INVALID_SSN = "0000";
 
   private static ArrayList<String> prefixes = null;
   private static ArrayList<String> suffixes = null;
@@ -197,9 +191,9 @@ public class NormalizationStep implements IStep {
     }
 
     String numericChars = data.replaceAll("[^0-9]", "");
-    if (numericChars == null || numericChars.length() >= MIN_SSN_LENGTH) {
-      numericChars = numericChars.substring(numericChars.length() - MIN_SSN_LENGTH);
-      if (!numericChars.equals(INVALID_SSN)) {
+    if (numericChars == null || numericChars.length() >= ValidationFilterStep.MIN_SSN_LENGTH) {
+      numericChars = numericChars.substring(numericChars.length() - ValidationFilterStep.MIN_SSN_LENGTH);
+      if (!numericChars.equals(ValidationFilterStep.INVALID_SSN)) {
         return numericChars;
       }
     }

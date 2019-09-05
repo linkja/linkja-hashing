@@ -126,12 +126,11 @@ class ValidationFilterStepTest {
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "asdf");
-    // Yes, per our rules this is valid.  We're coding it this way to ensure that no SSN warning appears in the output
     row.put(Engine.SOCIAL_SECURITY_NUMBER, "333-3E-3333");
 
     ValidationFilterStep step = new ValidationFilterStep();
     row = step.checkFieldFormat(row);
-    assertEquals("The following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format)",
+    assertEquals("The following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format), Social Security Number",
             row.getInvalidReason());
   }
 
@@ -183,14 +182,14 @@ class ValidationFilterStepTest {
 
     ValidationFilterStep step = new ValidationFilterStep();
     row = step.run(row);
-    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format)",
+    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format), Social Security Number",
             row.getInvalidReason());
 
     row.setInvalidReason(null);
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
     row = step.run(row);
-    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format)",
+    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format), Social Security Number",
             row.getInvalidReason());
 
     row.setInvalidReason(null);
@@ -199,7 +198,7 @@ class ValidationFilterStepTest {
     row.put(Engine.LAST_NAME_FIELD, "B");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "12/12/asdf");
     row = step.run(row);
-    assertEquals("The following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format)",
+    assertEquals("The following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format), Social Security Number",
             row.getInvalidReason());
 
     row.setInvalidReason(null);
@@ -322,5 +321,60 @@ class ValidationFilterStepTest {
     assertFalse(step.isValidDate("11/05/2019 25:15")); // Not a valid time
     assertFalse(step.isValidDate("05/05/2019 5:5:5")); // Not a valid format
     assertFalse(step.isValidDate("02/29/2019 05:15")); // Not a valid leap year
+  }
+
+  @Test
+  void isValidSSN_NullEmpty() {
+    // Because we allow the SSN to be optional, null and empty results are considered valid.
+    ValidationFilterStep step = new ValidationFilterStep();
+    assert(step.isValidSSN(null));
+    assert(step.isValidSSN(""));
+    assert(step.isValidSSN("   "));
+  }
+
+  @Test
+  void isValidSSN_Valid() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assert(step.isValidSSN("123-45-6789"));   // 9 digits with hyphen delimiters
+    assert(step.isValidSSN("123 45 6789"));   // 9 digits with space delimiters
+    assert(step.isValidSSN("123 45-6789"));   // 9 digits with mixed delimiters
+    assert(step.isValidSSN("123456789"));     // 9 digits with no delimiters
+    assert(step.isValidSSN("1234"));          // Has to be at least 4 characters
+    assert(step.isValidSSN("987456789"));     // Even though this is a TIN, we accept it
+
+    // Make sure our rule to exclude 666-**-**** don't flag these invalid
+    assert(step.isValidSSN("6667"));
+    assert(step.isValidSSN("66678"));
+    assert(step.isValidSSN("666789"));
+  }
+
+  @Test
+  void isValidSSN_Invalid() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidSSN("Pretty obviously not valid"));
+    assertFalse(step.isValidSSN("1-2-3"));
+    assertFalse(step.isValidSSN("666-45-6789"));  // Can't start with 666
+    assertFalse(step.isValidSSN("123"));          // Too short
+    assertFalse(step.isValidSSN("123A"));         // Right length, but non-numeric character
+    assertFalse(step.isValidSSN("1234567890"));   // Too long
+  }
+
+  @Test
+  void isValidSSN_Invalid_ZeroSegments() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidSSN("000-12-3456"));
+    assertFalse(step.isValidSSN("123-00-4567"));
+    assertFalse(step.isValidSSN("123-45-0000"));
+    // Same checks, without delimiters
+    assertFalse(step.isValidSSN("000123456"));
+    assertFalse(step.isValidSSN("123004567"));
+    assertFalse(step.isValidSSN("123450000"));
+  }
+
+  @Test
+  void isValidSSN_Invalid_KnownSSNs() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidSSN("078-05-1120"));
+    assertFalse(step.isValidSSN("078051120"));
   }
 }
