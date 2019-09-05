@@ -274,107 +274,159 @@ class ValidationFilterStepTest {
   }
 
   @Test
-  void isValidDate_NullEmpty() {
+  void isValidDateFormat_NullEmpty() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assertFalse(step.isValidDate(null));
-    assertFalse(step.isValidDate(""));
-    assertFalse(step.isValidDate("   "));
+    assertFalse(step.isValidDateFormat(null));
+    assertFalse(step.isValidDateFormat(""));
+    assertFalse(step.isValidDateFormat("   "));
   }
 
   @Test
-  void isValidDate_DateValid() {
+  void isValidDateFormat_DateValid() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assert(step.isValidDate("11/05/2019"));  // MM/dd/yyyy
-    assert(step.isValidDate("3/2/2019"));    // M/d/yyyy
-    assert(step.isValidDate("3-2-2019"));    // M-d-yyyy
-    assert(step.isValidDate("2019-3-2"));    // yyyy-M-d
-    assert(step.isValidDate("2019/3/2"));    // yyyy/M/d
-    assert(step.isValidDate("2019 3 2"));    // yyyy M d
-    assert(step.isValidDate("20190302"));    // yyyyMMdd
-    assert(step.isValidDate("02/29/2016"));      // Valid leap year
+    assert(step.isValidDateFormat("11/05/2019"));  // MM/dd/yyyy
+    assert(step.isValidDateFormat("3/2/2019"));    // M/d/yyyy
+    assert(step.isValidDateFormat("3-2-2019"));    // M-d-yyyy
+    assert(step.isValidDateFormat("2019-3-2"));    // yyyy-M-d
+    assert(step.isValidDateFormat("2019/3/2"));    // yyyy/M/d
+    assert(step.isValidDateFormat("2019 3 2"));    // yyyy M d
+    assert(step.isValidDateFormat("20190302"));    // yyyyMMdd
+    assert(step.isValidDateFormat("02/29/2016"));      // Valid leap year
   }
 
   @Test
-  void isValidDate_DateTimeValid() {
+  void isValidDateFormat_DateTimeValid() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assert(step.isValidDate("11/05/2019 3:30"));      // MM/dd/yyyy H:mm
-    assert(step.isValidDate("3/2/2019 15:30"));       // M/d/yyyy HH:mm
-    assert(step.isValidDate("3-2-2019 03:30"));       // M-d-yyyy HH:mm
-    assert(step.isValidDate("2019-3-2 07:15:32"));    // yyyy-M-d HH:mm:ss
-    assert(step.isValidDate("7/4/1930 0:00"));        // M/d/yyyy H:mm
-    assert(step.isValidDate("02/29/2016 00:00"));     // Valid leap year
+    assert(step.isValidDateFormat("11/05/2019 3:30"));      // MM/dd/yyyy H:mm
+    assert(step.isValidDateFormat("3/2/2019 15:30"));       // M/d/yyyy HH:mm
+    assert(step.isValidDateFormat("3-2-2019 03:30"));       // M-d-yyyy HH:mm
+    assert(step.isValidDateFormat("2019-3-2 07:15:32"));    // yyyy-M-d HH:mm:ss
+    assert(step.isValidDateFormat("7/4/1930 0:00"));        // M/d/yyyy H:mm
+    assert(step.isValidDateFormat("02/29/2016 00:00"));     // Valid leap year
   }
 
   @Test
-  void isValidDate_DateInvalid() {
+  void isValidDateFormat_DateInvalid() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assertFalse(step.isValidDate("Nov 05 2019"));     // Not a format we support
-    assertFalse(step.isValidDate("05/2019"));         // Missing one of the elements
-    assertFalse(step.isValidDate("02/29/2019"));      // Not a valid leap year
-    assertFalse(step.isValidDate("4/35/2019"));       // Not a valid day in April
-    assertFalse(step.isValidDate("14/22/2019"));      // Not a valid month
+    assertFalse(step.isValidDateFormat("Nov 05 2019"));     // Not a format we support
+    assertFalse(step.isValidDateFormat("05/2019"));         // Missing one of the elements
+    assertFalse(step.isValidDateFormat("02/29/2019"));      // Not a valid leap year
+    assertFalse(step.isValidDateFormat("4/35/2019"));       // Not a valid day in April
+    assertFalse(step.isValidDateFormat("14/22/2019"));      // Not a valid month
   }
 
   @Test
-  void isValidDate_DateTimeInvalid() {
+  void isValidDateFormat_DateTimeInvalid() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assertFalse(step.isValidDate("11/05/2019 25:15")); // Not a valid time
-    assertFalse(step.isValidDate("05/05/2019 5:5:5")); // Not a valid format
-    assertFalse(step.isValidDate("02/29/2019 05:15")); // Not a valid leap year
+    assertFalse(step.isValidDateFormat("11/05/2019 25:15")); // Not a valid time
+    assertFalse(step.isValidDateFormat("05/05/2019 5:5:5")); // Not a valid format
+    assertFalse(step.isValidDateFormat("02/29/2019 05:15")); // Not a valid leap year
   }
 
   @Test
-  void isValidSSN_NullEmpty() {
-    // Because we allow the SSN to be optional, null and empty results are considered valid.
+  void isValidSSNFormat_NullEmpty() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assert(step.isValidSSN(null));
-    assert(step.isValidSSN(""));
-    assert(step.isValidSSN("   "));
+    assertFalse(step.isValidSSNFormat(null));
+    assertFalse(step.isValidSSNFormat(""));
+    assertFalse(step.isValidSSNFormat("   "));
   }
 
   @Test
-  void isValidSSN_Valid() {
+  void isValidSSNFormat_Valid() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assert(step.isValidSSN("123-45-6789"));   // 9 digits with hyphen delimiters
-    assert(step.isValidSSN("123 45 6789"));   // 9 digits with space delimiters
-    assert(step.isValidSSN("123 45-6789"));   // 9 digits with mixed delimiters
-    assert(step.isValidSSN("123456789"));     // 9 digits with no delimiters
-    assert(step.isValidSSN("1234"));          // Has to be at least 4 characters
-    assert(step.isValidSSN("987456789"));     // Even though this is a TIN, we accept it
+    assert(step.isValidSSNFormat("123-45-6789"));   // 9 digits with hyphen delimiters
+    assert(step.isValidSSNFormat("123 45 6789"));   // 9 digits with space delimiters
+    assert(step.isValidSSNFormat("123 45-6789"));   // 9 digits with mixed delimiters
+    assert(step.isValidSSNFormat("123456789"));     // 9 digits with no delimiters
+    assert(step.isValidSSNFormat("1234"));          // Has to be at least 4 characters
+    assert(step.isValidSSNFormat("987456789"));     // Even though this is a TIN, we accept it
 
     // Make sure our rule to exclude 666-**-**** don't flag these invalid
-    assert(step.isValidSSN("6667"));
-    assert(step.isValidSSN("66678"));
-    assert(step.isValidSSN("666789"));
+    assert(step.isValidSSNFormat("6667"));
+    assert(step.isValidSSNFormat("66678"));
+    assert(step.isValidSSNFormat("666789"));
   }
 
   @Test
-  void isValidSSN_Invalid() {
+  void isValidSSNFormat_Invalid() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assertFalse(step.isValidSSN("Pretty obviously not valid"));
-    assertFalse(step.isValidSSN("1-2-3"));
-    assertFalse(step.isValidSSN("666-45-6789"));  // Can't start with 666
-    assertFalse(step.isValidSSN("123"));          // Too short
-    assertFalse(step.isValidSSN("123A"));         // Right length, but non-numeric character
-    assertFalse(step.isValidSSN("1234567890"));   // Too long
+    assertFalse(step.isValidSSNFormat("Pretty obviously not valid"));
+    assertFalse(step.isValidSSNFormat("1-2-3"));
+    assertFalse(step.isValidSSNFormat("666-45-6789"));  // Can't start with 666
+    assertFalse(step.isValidSSNFormat("123"));          // Too short
+    assertFalse(step.isValidSSNFormat("123A"));         // Right length, but non-numeric character
+    assertFalse(step.isValidSSNFormat("1234567890"));   // Too long
   }
 
   @Test
-  void isValidSSN_Invalid_ZeroSegments() {
+  void isValidSSNFormat_Invalid_ZeroSegments() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assertFalse(step.isValidSSN("000-12-3456"));
-    assertFalse(step.isValidSSN("123-00-4567"));
-    assertFalse(step.isValidSSN("123-45-0000"));
+    assertFalse(step.isValidSSNFormat("000-12-3456"));
+    assertFalse(step.isValidSSNFormat("123-00-4567"));
+    assertFalse(step.isValidSSNFormat("123-45-0000"));
     // Same checks, without delimiters
-    assertFalse(step.isValidSSN("000123456"));
-    assertFalse(step.isValidSSN("123004567"));
-    assertFalse(step.isValidSSN("123450000"));
+    assertFalse(step.isValidSSNFormat("000123456"));
+    assertFalse(step.isValidSSNFormat("123004567"));
+    assertFalse(step.isValidSSNFormat("123450000"));
   }
 
   @Test
-  void isValidSSN_Invalid_KnownSSNs() {
+  void isValidSSNFormat_Invalid_KnownSSNs() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assertFalse(step.isValidSSN("078-05-1120"));
-    assertFalse(step.isValidSSN("078051120"));
+    assertFalse(step.isValidSSNFormat("078-05-1120"));
+    assertFalse(step.isValidSSNFormat("078051120"));
+  }
+
+  @Test
+  void isValidPatientIdentifierFormat_NullEmpty() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidPatientIdentifierFormat(null));
+    assertFalse(step.isValidPatientIdentifierFormat(""));
+    assertFalse(step.isValidPatientIdentifierFormat("   "));
+  }
+
+  @Test
+  void isValidPatientIdentifierFormat_Invalid() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidPatientIdentifierFormat("12345!"));    // Invalid character (!)
+    assertFalse(step.isValidPatientIdentifierFormat("\t12345"));   // Tab (we only allow spaces)
+    assertFalse(step.isValidPatientIdentifierFormat("_"));         // Requires at least one alpha-numeric
+  }
+
+  @Test
+  void isValidPatientIdentifierFormat_Valid() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    // Minimum of one alpha-numeric character
+    assert(step.isValidPatientIdentifierFormat("0"));
+    assert(step.isValidPatientIdentifierFormat("a"));
+    assert(step.isValidPatientIdentifierFormat("A")); // Case sensitivity check
+
+    // Verify all of the allowed special characters before
+    assert(step.isValidPatientIdentifierFormat("00"));
+    assert(step.isValidPatientIdentifierFormat("a0"));
+    assert(step.isValidPatientIdentifierFormat("Aa0"));
+    assert(step.isValidPatientIdentifierFormat(" 0"));
+    assert(step.isValidPatientIdentifierFormat("-0"));
+    assert(step.isValidPatientIdentifierFormat(".0"));
+    assert(step.isValidPatientIdentifierFormat("#0"));
+    assert(step.isValidPatientIdentifierFormat("_0"));
+
+    // Verify all of the allowed special characters after
+    assert(step.isValidPatientIdentifierFormat("00"));
+    assert(step.isValidPatientIdentifierFormat("0a"));
+    assert(step.isValidPatientIdentifierFormat("0aA"));
+    assert(step.isValidPatientIdentifierFormat("0 "));
+    assert(step.isValidPatientIdentifierFormat("0-"));
+    assert(step.isValidPatientIdentifierFormat("0."));
+    assert(step.isValidPatientIdentifierFormat("0#"));
+    assert(step.isValidPatientIdentifierFormat("0_"));
+
+    // More complete tests of mixed categories of characters
+    assert(step.isValidPatientIdentifierFormat("100.100001a"));
+    assert(step.isValidPatientIdentifierFormat("0 0 . 1"));
+    assert(step.isValidPatientIdentifierFormat("      1"));
+    assert(step.isValidPatientIdentifierFormat("asdf"));
+    assert(step.isValidPatientIdentifierFormat("#10-60_93#a"));
+    assert(step.isValidPatientIdentifierFormat("1a2B3c4D"));
   }
 }
