@@ -186,6 +186,13 @@ class ValidationFilterStepTest {
             row.getInvalidReason());
 
     row.setInvalidReason(null);
+    row.put(Engine.FIRST_NAME_FIELD, "J1");
+    row.put(Engine.LAST_NAME_FIELD, "D2");
+    row = step.run(row);
+    assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier, Date of Birth\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format), Social Security Number, First Name, Last Name",
+      row.getInvalidReason());
+
+    row.setInvalidReason(null);
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
     row = step.run(row);
@@ -196,9 +203,10 @@ class ValidationFilterStepTest {
     row.put(Engine.PATIENT_ID_FIELD, "12345");
     row.put(Engine.FIRST_NAME_FIELD, "A");
     row.put(Engine.LAST_NAME_FIELD, "B");
+    row.put(Engine.SOCIAL_SECURITY_NUMBER, "");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "12/12/asdf");
     row = step.run(row);
-    assertEquals("The following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format), Social Security Number",
+    assertEquals("The following fields must be longer than 1 character: First Name, Last Name\r\nThe following fields are not in a valid format: Date of Birth (recommended to use MM/DD/YYYY format)",
             row.getInvalidReason());
 
     row.setInvalidReason(null);
@@ -428,5 +436,36 @@ class ValidationFilterStepTest {
     assert(step.isValidPatientIdentifierFormat("asdf"));
     assert(step.isValidPatientIdentifierFormat("#10-60_93#a"));
     assert(step.isValidPatientIdentifierFormat("1a2B3c4D"));
+  }
+
+  @Test
+  void isValidNameFormat_NullEmpty() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidNameFormat(null));
+    assertFalse(step.isValidNameFormat(""));
+    assertFalse(step.isValidNameFormat("   "));
+  }
+
+  @Test
+  void isValidNameFormat_Invalid() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidNameFormat("A"));    // <2 characters
+    assertFalse(step.isValidNameFormat("A0"));   // <2 alphabetic characters
+    assertFalse(step.isValidNameFormat("12345"));// No alphabetic characters
+  }
+
+  @Test
+  void isValidNameFormat_Valid() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    // Minimum of two alphabetic characters
+    assert(step.isValidNameFormat("aa"));
+    assert(step.isValidNameFormat("Aa"));    // Case-insensitive validation
+
+    // Allow other non-alphabetic characters once we have two alphabetic characters
+    assert(step.isValidNameFormat("A j"));   // Alpha characters don't have to be consecutive
+    assert(step.isValidNameFormat("A.J."));  // Doesn't have to end with alpha
+    assert(step.isValidNameFormat(" .J.A")); // Doesn't have to start with alpha
+    assert(step.isValidNameFormat("  STEVEN  "));
+    assert(step.isValidNameFormat("I'M GLAD THIS! ISN'T HOW MY #NAME IS spelled@#$%^&*()"));  // Anything goes!
   }
 }

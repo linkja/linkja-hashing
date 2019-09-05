@@ -41,7 +41,7 @@ public class ValidationFilterStep implements IStep {
    *  - Exclude check for first 3 digits being 666 (check this separately)
    *  - Matches ranges of 4-9 numbers with optional delimiters
    */
-  public Pattern SSNRegex = Pattern.compile("^(?!000)[0-9]{0,3}[- ]?(?!00)[0-9]{0,2}[- ]?(?!0000)[0-9]{4}$");
+  public static final Pattern SSNRegex = Pattern.compile("^(?!000)[0-9]{0,3}[- ]?(?!00)[0-9]{0,2}[- ]?(?!0000)[0-9]{4}$");
 
   /**
    * The minimum size of the SSN field to consider it valid
@@ -59,7 +59,14 @@ public class ValidationFilterStep implements IStep {
    *   - number symbol (#)
    *   - underscore (_)
    */
-  public Pattern PatientIDRegex = Pattern.compile("^[a-z0-9 \\-\\.\\#_]*[a-z0-9]+[a-z0-9 \\-\\.\\#_]*$", Pattern.CASE_INSENSITIVE);
+  public static final Pattern PatientIDRegex = Pattern.compile("^[a-z0-9 \\-\\.\\#_]*[a-z0-9]+[a-z0-9 \\-\\.\\#_]*$", Pattern.CASE_INSENSITIVE);
+
+  /**
+   * Matches the name component against the following rules:
+   * - Must have at least two alphabetic characters anywhere in the string
+   * - All other characters are allowed
+   */
+  public static final Pattern NameRegex = Pattern.compile(".*[a-z]+.*[a-z]+.*", Pattern.CASE_INSENSITIVE);
 
   /**
    * SSNs that are considered invalid because they have been used in advertisements.
@@ -187,6 +194,19 @@ public class ValidationFilterStep implements IStep {
         hasFormatError = true;
       }
     }
+    if (row.containsKey(Engine.FIRST_NAME_FIELD)) {
+      String firstNameString = row.get(Engine.FIRST_NAME_FIELD);
+      if (shouldValidateNameFormat(firstNameString) && !isValidNameFormat(firstNameString)) {
+        formatBuilder.append("First Name, ");
+        hasFormatError = true;
+      }
+    }if (row.containsKey(Engine.LAST_NAME_FIELD)) {
+      String lastNameString = row.get(Engine.LAST_NAME_FIELD);
+      if (shouldValidateNameFormat(lastNameString) && !isValidNameFormat(lastNameString)) {
+        formatBuilder.append("Last Name, ");
+        hasFormatError = true;
+      }
+    }
 
     if (hasFormatError) {
       row.setInvalidReason(safeAppendInvalidReason(row, formatBuilder.toString()));
@@ -196,13 +216,44 @@ public class ValidationFilterStep implements IStep {
   }
 
   /**
+   * Utility method to perform a simple string format validation check against a regex
+   * @param value
+   * @param regex
+   * @return
+   */
+  private boolean isStringValidAgainstRegexFormat(String value, Pattern regex) {
+    if (value == null) {
+      return false;
+    }
+    return regex.matcher(value).matches();
+  }
+
+  /**
+   * Validate the name component against our format validation rules for names.
+   * @param nameString
+   * @return
+   */
+  public boolean isValidNameFormat(String nameString) {
+    return isStringValidAgainstRegexFormat(nameString, NameRegex);
+  }
+
+  /**
+   * Determine if the name component is long enough to warrant a format validation check
+   * @param nameString
+   * @return
+   */
+  private boolean shouldValidateNameFormat(String nameString) {
+    return (nameString != null && nameString.trim().length() >= Engine.MIN_NAME_LENGTH);
+  }
+
+  /**
    * Because the SSN field is optional, this check will ensure that we are only doing a validation check when it is
    * appropriate.  Note that if we shouldn't validate the SSN, it should be explicitly blanked out later on.  This is
    * not the responsibility of the validation step to do, however.
    * @param ssnString
    * @return
    */
-  public boolean shouldValidateSSNFormat(String ssnString) {
+  private boolean shouldValidateSSNFormat(String ssnString) {
     return (ssnString != null) && (!ssnString.trim().equals(""));
   }
 
@@ -249,7 +300,7 @@ public class ValidationFilterStep implements IStep {
    * @param patientIdString
    * @return
    */
-  public boolean shouldValidatePatientIdentifierFormat(String patientIdString) {
+  private boolean shouldValidatePatientIdentifierFormat(String patientIdString) {
     return (patientIdString != null && !patientIdString.trim().isEmpty());
   }
 
@@ -259,11 +310,7 @@ public class ValidationFilterStep implements IStep {
    * @return
    */
   public boolean isValidPatientIdentifierFormat(String patientIdString) {
-    if (patientIdString == null) {
-      return false;
-    }
-
-    return PatientIDRegex.matcher(patientIdString).matches();
+    return isStringValidAgainstRegexFormat(patientIdString, PatientIDRegex);
   }
 
   /**
