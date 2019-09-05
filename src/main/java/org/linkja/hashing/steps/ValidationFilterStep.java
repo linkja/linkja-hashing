@@ -5,22 +5,76 @@ import org.linkja.hashing.DataRow;
 import org.linkja.hashing.Engine;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
+import java.util.Arrays;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 public class ValidationFilterStep implements IStep {
+  /**
+   * Validation of date/time formats.  Note that because we are using the STRICT resolver, we need to use the Java 8
+   * notation of year ('uuuu' instead of 'yyyy').
+   */
   public static final DateTimeFormatter DATE_OF_BIRTH_FORMATTER = DateTimeFormatter.ofPattern(""
-          + "[yyyy/M/d[ H:mm[:ss]]]"
-          + "[yyyy-M-d[ H:mm[:ss]]]"
-          + "[yyyy M d[ H:mm[:ss]]]"
-          + "[yyyyMMdd[ H:mm[:ss]]]"
-          + "[M/d/yyyy[ H:mm[:ss]]]"
-          + "[M-d-yyyy[ H:mm[:ss]]]"
-          + "[M d yyyy[ H:mm[:ss]]]"
-          + "[MMddyyyy[ H:mm[:ss]]]"
-  );
+          + "[uuuu/M/d[ H:mm[:ss]]]"
+          + "[uuuu-M-d[ H:mm[:ss]]]"
+          + "[uuuu M d[ H:mm[:ss]]]"
+          + "[uuuuMMdd[ H:mm[:ss]]]"
+          + "[M/d/uuuu[ H:mm[:ss]]]"
+          + "[M-d-uuuu[ H:mm[:ss]]]"
+          + "[M d uuuu[ H:mm[:ss]]]"
+          + "[MMdduuuu[ H:mm[:ss]]]"
+  ).withResolverStyle(ResolverStyle.STRICT);
+
+  // This is a specific SSN that is of appropriate length, but is considered an invalid placeholder and should be
+  // removed
+  public static final String INVALID_SSN = "0000";
+
+  /**
+   * Regex to determine if SSN is valid
+   * Adapted from 4.12. Validate Social Security Numbers, in "Regular Expressions Cookbook, 2nd Edition" with the
+   * following changes:
+   *  - Allow 900-999 (TINs)
+   *  - Allow hyphen or space delimiters (can be optional)
+   *  - Exclude check for first 3 digits being 666 (check this separately)
+   *  - Matches ranges of 4-9 numbers with optional delimiters
+   */
+  public static final Pattern SSNRegex = Pattern.compile("^(?!000)[0-9]{0,3}[- ]?(?!00)[0-9]{0,2}[- ]?(?!0000)[0-9]{4}$");
+
+  /**
+   * The minimum size of the SSN field to consider it valid
+   */
+  public static final int MIN_SSN_LENGTH = 4;
+
+  /**
+   * Matches the patient identifier field against the following rules:
+   * - Must have at least one alpha-numeric character
+   * - May also (optionally) contain:
+   *   - other alpha-numeric characters
+   *   - space ( )
+   *   - hyphen (-)
+   *   - period (.)
+   *   - number symbol (#)
+   *   - underscore (_)
+   */
+  public static final Pattern PatientIDRegex = Pattern.compile("^[a-z0-9 \\-\\.\\#_]*[a-z0-9]+[a-z0-9 \\-\\.\\#_]*$", Pattern.CASE_INSENSITIVE);
+
+  /**
+   * Matches the name component against the following rules:
+   * - Must have at least two alphabetic characters anywhere in the string
+   * - All other characters are allowed
+   */
+  public static final Pattern NameRegex = Pattern.compile(".*[a-z]+.*[a-z]+.*", Pattern.CASE_INSENSITIVE);
+
+  /**
+   * SSNs that are considered invalid because they have been used in advertisements.
+   * These must be formatted as 9 digits with no delimiters
+   */
+  public static final String[] BLACKLISTED_SSNS = new String[] {
+    "078051120"
+  };
 
   @Override
   public DataRow run(DataRow row) {
@@ -122,9 +176,36 @@ public class ValidationFilterStep implements IStep {
     boolean hasFormatError = false;
     StringBuilder formatBuilder = new StringBuilder();
     formatBuilder.append("The following fields are not in a valid format: ");
-    if (row.containsKey(Engine.DATE_OF_BIRTH_FIELD) && !isValidDate(row.get(Engine.DATE_OF_BIRTH_FIELD))) {
+    if (row.containsKey(Engine.DATE_OF_BIRTH_FIELD) && !isValidDateFormat(row.get(Engine.DATE_OF_BIRTH_FIELD))) {
       formatBuilder.append("Date of Birth (recommended to use MM/DD/YYYY format), ");
       hasFormatError = true;
+    }
+    if (row.containsKey(Engine.SOCIAL_SECURITY_NUMBER)) {
+      String ssnString = row.get(Engine.SOCIAL_SECURITY_NUMBER);
+      if (shouldValidateSSNFormat(ssnString) && !isValidSSNFormat(ssnString)) {
+        formatBuilder.append("Social Security Number, ");
+        hasFormatError = true;
+      }
+    }
+    if (row.containsKey(Engine.PATIENT_ID_FIELD)) {
+      String patientIdString = row.get(Engine.PATIENT_ID_FIELD);
+      if (shouldValidatePatientIdentifierFormat(patientIdString) && !isValidPatientIdentifierFormat(patientIdString)){
+        formatBuilder.append("Patient Identifier, ");
+        hasFormatError = true;
+      }
+    }
+    if (row.containsKey(Engine.FIRST_NAME_FIELD)) {
+      String firstNameString = row.get(Engine.FIRST_NAME_FIELD);
+      if (shouldValidateNameFormat(firstNameString) && !isValidNameFormat(firstNameString)) {
+        formatBuilder.append("First Name, ");
+        hasFormatError = true;
+      }
+    }if (row.containsKey(Engine.LAST_NAME_FIELD)) {
+      String lastNameString = row.get(Engine.LAST_NAME_FIELD);
+      if (shouldValidateNameFormat(lastNameString) && !isValidNameFormat(lastNameString)) {
+        formatBuilder.append("Last Name, ");
+        hasFormatError = true;
+      }
     }
 
     if (hasFormatError) {
@@ -135,11 +216,109 @@ public class ValidationFilterStep implements IStep {
   }
 
   /**
+   * Utility method to perform a simple string format validation check against a regex
+   * @param value
+   * @param regex
+   * @return
+   */
+  private boolean isStringValidAgainstRegexFormat(String value, Pattern regex) {
+    if (value == null) {
+      return false;
+    }
+    return regex.matcher(value).matches();
+  }
+
+  /**
+   * Validate the name component against our format validation rules for names.
+   * @param nameString
+   * @return
+   */
+  public boolean isValidNameFormat(String nameString) {
+    return isStringValidAgainstRegexFormat(nameString, NameRegex);
+  }
+
+  /**
+   * Determine if the name component is long enough to warrant a format validation check
+   * @param nameString
+   * @return
+   */
+  private boolean shouldValidateNameFormat(String nameString) {
+    return (nameString != null && nameString.trim().length() >= Engine.MIN_NAME_LENGTH);
+  }
+
+  /**
+   * Because the SSN field is optional, this check will ensure that we are only doing a validation check when it is
+   * appropriate.  Note that if we shouldn't validate the SSN, it should be explicitly blanked out later on.  This is
+   * not the responsibility of the validation step to do, however.
+   * @param ssnString
+   * @return
+   */
+  private boolean shouldValidateSSNFormat(String ssnString) {
+    return (ssnString != null) && (!ssnString.trim().equals(""));
+  }
+
+  /**
+   * Determine if a string representing an SSN is valid or not.  Note that we are lumping TINs in with SSNs, although
+   * they are slightly different.
+   * @param ssnString
+   * @return
+   */
+  public boolean isValidSSNFormat(String ssnString) {
+    if (ssnString == null) {
+      return false;
+    }
+
+    String strippedSSN = ssnString.trim().replaceAll("[\\- ]", "");
+    if (strippedSSN.length() < MIN_SSN_LENGTH) {
+      return false;
+    }
+
+    // If it's beyond 9 characters, something is wrong - either too many digits or invalid delimiters.  Regardless,
+    // we're done checking at this point.
+    if (strippedSSN.length() > 9) {
+      return false;
+    }
+    // If it's 9 digits long, we need to check against our blacklist
+    else if (strippedSSN.length() == 9) {
+      boolean blacklisted = Arrays.stream(BLACKLISTED_SSNS).anyMatch(x -> x.equals(strippedSSN));
+      if (blacklisted) {
+        return false;
+      }
+
+      // One edge condition not covered in our regex is starting with 666-**-****
+      if (strippedSSN.startsWith("666")) {
+        return false;
+      }
+    }
+
+    return SSNRegex.matcher(strippedSSN).matches();
+  }
+
+  /**
+   * Determine if the patient identifier string is sufficient enough to perform a validation check against for
+   * the format.
+   * @param patientIdString
+   * @return
+   */
+  private boolean shouldValidatePatientIdentifierFormat(String patientIdString) {
+    return (patientIdString != null && !patientIdString.trim().isEmpty());
+  }
+
+  /**
+   * Determine if a string representing a patient identifier is valid or not based on our formatting requirements.
+   * @param patientIdString
+   * @return
+   */
+  public boolean isValidPatientIdentifierFormat(String patientIdString) {
+    return isStringValidAgainstRegexFormat(patientIdString, PatientIDRegex);
+  }
+
+  /**
    * Determine if a string, which should represent a date, is in one of our allowed input date formats.
    * @param dateString The string to parse
    * @return true if the string appears to be a date, false otherwise.
    */
-  public boolean isValidDate(String dateString) {
+  public boolean isValidDateFormat(String dateString) {
     if (dateString == null) {
       return false;
     }
