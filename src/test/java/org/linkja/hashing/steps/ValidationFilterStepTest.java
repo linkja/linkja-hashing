@@ -369,13 +369,57 @@ class ValidationFilterStepTest {
   @Test
   void isValidSSNFormat_Invalid_ZeroSegments() {
     ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidSSNFormat("000-00-0000"));  // All 0s is a common invalid SSN in practice
     assertFalse(step.isValidSSNFormat("000-12-3456"));
     assertFalse(step.isValidSSNFormat("123-00-4567"));
     assertFalse(step.isValidSSNFormat("123-45-0000"));
     // Same checks, without delimiters
+    assertFalse(step.isValidSSNFormat("000000000"));    // All 0s is a common invalid SSN in practice
     assertFalse(step.isValidSSNFormat("000123456"));
     assertFalse(step.isValidSSNFormat("123004567"));
     assertFalse(step.isValidSSNFormat("123450000"));
+  }
+
+  @Test
+  void isValidSSNFormat_Valid_ZeroSegments() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertTrue(step.isValidSSNFormat("100-02-3456"));
+    assertTrue(step.isValidSSNFormat("123-10-0567"));
+    assertTrue(step.isValidSSNFormat("120-01-4567"));
+    assertTrue(step.isValidSSNFormat("123-40-0001"));
+    // Same checks, without delimiters
+    assertTrue(step.isValidSSNFormat("100023456"));
+    assertTrue(step.isValidSSNFormat("123100567"));
+    assertTrue(step.isValidSSNFormat("120014567"));
+    assertTrue(step.isValidSSNFormat("123400001"));
+  }
+
+  @Test
+  void isValidSSNFormat_Invalid_NineSegments() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidSSNFormat("999-99-9999"));  // All 9s is a common invalid SSN in practice
+    assertFalse(step.isValidSSNFormat("999-12-3456"));
+    assertFalse(step.isValidSSNFormat("123-99-4567"));
+    assertFalse(step.isValidSSNFormat("123-45-9999"));
+    // Same checks, without delimiters
+    assertFalse(step.isValidSSNFormat("999999999"));    // All 9s is a common invalid SSN in practice
+    assertFalse(step.isValidSSNFormat("999123456"));
+    assertFalse(step.isValidSSNFormat("123994567"));
+    assertFalse(step.isValidSSNFormat("123459999"));
+  }
+
+  @Test
+  void isValidSSNFormat_Valid_NineSegments() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertTrue(step.isValidSSNFormat("199-92-3456"));
+    assertTrue(step.isValidSSNFormat("123-19-9567"));
+    assertTrue(step.isValidSSNFormat("129-91-4567"));
+    assertTrue(step.isValidSSNFormat("123-49-9991"));
+    // Same checks, without delimiters
+    assertTrue(step.isValidSSNFormat("199923456"));
+    assertTrue(step.isValidSSNFormat("123199567"));
+    assertTrue(step.isValidSSNFormat("129914567"));
+    assertTrue(step.isValidSSNFormat("123499991"));
   }
 
   @Test

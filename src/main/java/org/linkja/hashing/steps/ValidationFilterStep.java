@@ -41,7 +41,7 @@ public class ValidationFilterStep implements IStep {
    *  - Exclude check for first 3 digits being 666 (check this separately)
    *  - Matches ranges of 4-9 numbers with optional delimiters
    */
-  public static final Pattern SSNRegex = Pattern.compile("^(?!000)[0-9]{0,3}[- ]?(?!00)[0-9]{0,2}[- ]?(?!0000)[0-9]{4}$");
+  public static final Pattern SSNRegex = Pattern.compile("^(?!000|999)[0-9]{0,3}[- ]?(?!00|99)[0-9]{0,2}[- ]?(?!0000|9999)[0-9]{4}$");
 
   /**
    * The minimum size of the SSN field to consider it valid
