@@ -1,6 +1,7 @@
 package org.linkja.hashing.steps;
 
 import org.bouncycastle.util.encoders.Hex;
+import org.linkja.crypto.Library;
 import org.linkja.hashing.DataRow;
 import org.linkja.hashing.Engine;
 import org.linkja.hashing.HashParameters;
@@ -121,7 +122,7 @@ public class HashingStep implements IStep {
   }
 
   private String getHashString(String hashInput) {
-    return Hex.toHexString(this.messageDigest.digest(hashInput.getBytes())).toUpperCase();
+    return Library.hash(hashInput).toUpperCase();
   }
 
   /**

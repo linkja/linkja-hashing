@@ -24,6 +24,11 @@ public class Runner {
       System.exit(1);
     }
 
+    if (cmd.hasOption("version")) {
+      displayVersion();
+      System.exit(0);
+    }
+
     long startTime = System.nanoTime();
 
     // Perform some initialization - purposefully done after timing has started.
@@ -135,6 +140,11 @@ public class Runner {
     return parameters;
   }
 
+  public static void displayVersion() {
+    System.out.printf("linkja-hashing v%s\r\n", Runner.class.getPackage().getImplementationVersion());
+    System.out.printf("linkja-crypto signature: %s\r\n", (new org.linkja.crypto.Library()).getLibrarySignature());
+  }
+
   /**
    * Load the configuration properties file for the hashing system, and add the values into the EngineParameters
    * @param parameters The collection of parameters used by the engine
@@ -200,6 +210,10 @@ public class Runner {
   public static Options setUpCommandLine() {
     Options options = new Options();
 
+    Option versionOpt = new Option("v", "version", false, "Display the version of this program");
+    versionOpt.setRequired(false);
+    options.addOption(versionOpt);
+
     Option displaySaltOpt = new Option("ds", "displaySalt", false, "display the salt file contents");
     displaySaltOpt.setRequired(false);
     options.addOption(displaySaltOpt);
@@ -209,7 +223,7 @@ public class Runner {
     options.addOption(hashingOpt);
 
     Option keyFileOpt = new Option("key", "privateKey", true, "path to private key file");
-    keyFileOpt.setRequired(true);
+    keyFileOpt.setRequired(false);
     options.addOption(keyFileOpt);
 
     Option encryptionKeyFileOpt = new Option("enc", "encryptionKey", true, "path to public key file to encrypt hashed output");
@@ -217,7 +231,7 @@ public class Runner {
     options.addOption(encryptionKeyFileOpt);
 
     Option saltFileOpt = new Option("salt", "saltFile", true, "path to encrypted salt file");
-    saltFileOpt.setRequired(true);
+    saltFileOpt.setRequired(false);
     options.addOption(saltFileOpt);
 
     Option patientFileOpt = new Option("patient", "patientFile", true, "path to the file containing patient data");
@@ -270,7 +284,7 @@ public class Runner {
    */
   public static void displayUsage() {
     System.out.println();
-    System.out.println("Usage: java -jar Hashing.jar [--hashing | --displaySalt]");
+    System.out.println("Usage: java -jar Hashing.jar [--hashing | --displaySalt | --version]");
     System.out.println();
     System.out.println("HASHING");
     System.out.println("-------------");
