@@ -1,6 +1,5 @@
 package org.linkja.hashing.steps;
 
-import org.bouncycastle.util.encoders.Hex;
 import org.linkja.crypto.Library;
 import org.linkja.hashing.DataRow;
 import org.linkja.hashing.Engine;

@@ -3,13 +3,10 @@ package org.linkja.hashing;
 
 import org.linkja.core.*;
 import org.apache.commons.cli.*;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
-import java.security.*;
 import java.util.Properties;
 
 // TODO: Write unit tests for helper methods (everything but main)
@@ -31,49 +28,31 @@ public class Runner {
 
     long startTime = System.nanoTime();
 
-    // Perform some initialization - purposefully done after timing has started.
-    Security.addProvider(new BouncyCastleProvider());
-
-    // There are two modes under which our program can run - hashing and displaySalt.  Depending on which of these
-    // modes is set, we have different requirements for other parameters.
-    //
     // Our parameters come from the command line and from a local config.properties file.  We split these up under the
     // assumption that those most likely to change across run should be passed in the command line, and those most
     // likely to remain consistent across runs should be in a config.properties file.
     EngineParameters parameters = new EngineParameters();
     try {
-      // First get which mode is set
-      parameters.setHashingMode(cmd.hasOption("hashing"));
-      parameters.setDisplaySaltMode(cmd.hasOption("displaySalt"));
-
       // Get the additional parameters that may be set
-      parameters.setPrivateKeyFile(cmd.getOptionValue("privateKey"));
       parameters.setSaltFile(cmd.getOptionValue("saltFile"));
       parameters.setPatientFile(cmd.getOptionValue("patientFile"));
       parameters.setPrivateDate(cmd.getOptionValue("privateDate"));
       parameters.setEncryptionKeyFile(cmd.getOptionValue("encryptionKey"));
       parameters.setDelimiter(cmd.getOptionValue("delimiter", new String(new char[] { EngineParameters.DEFAULT_DELIMITER })));
       parameters.setRecordExclusionMode(parseRecordExclusionMode(cmd.getOptionValue("exclusionMode")));
-      parameters.setWriteUnhashedData(cmd.hasOption("writeUnhashed"));
+      parameters.setWriteUnhashedData(cmd.hasOption("unhashed"));
+      parameters.setWriteUnencryptedData(cmd.hasOption("unencrypted"));
       parameters = loadConfig(parameters);
       String outputDirectory = cmd.getOptionValue("outDirectory");
       if (outputDirectory == null || outputDirectory.equals("")) {
         Path path = FileSystems.getDefault().getPath("").toAbsolutePath();
         outputDirectory = path.toString();
-        if (parameters.isHashingMode()) {
-          System.out.printf("Results will be written to %s\r\n", outputDirectory);
-        }
+        System.out.printf("Results will be written to %s\r\n", outputDirectory);
       }
       parameters.setOutputDirectory(outputDirectory);
 
-      if (parameters.isDisplaySaltMode() && !parameters.displaySaltModeOptionsSet()) {
+      if (!parameters.hashingModeOptionsSet()) {
         throw new LinkjaException("Not all of the required parameters were provided");
-      }
-      else if (parameters.isHashingMode() && !parameters.hashingModeOptionsSet()) {
-        throw new LinkjaException("Not all of the required parameters were provided");
-      }
-      else if (!parameters.isDisplaySaltMode() && !parameters.isHashingMode()) {
-        throw new LinkjaException("Please specify either --hashing or --displaySalt");
       }
     }
     catch (Exception exc) {
@@ -85,7 +64,7 @@ public class Runner {
 
     HashParameters hashParameters = null;
     try {
-      hashParameters = parseProjectSalt(parameters.getSaltFile(), parameters.getPrivateKeyFile(), parameters.getMinSaltLength());
+      hashParameters = parseProjectSalt(parameters.getSaltFile(), parameters.getMinSaltLength());
       hashParameters.setPrivateDate(parameters.getPrivateDate());  // Provide a copy to our hashing parameters collection
     }
     catch (Exception exc) {
@@ -95,24 +74,11 @@ public class Runner {
     }
 
     try {
-      // Displaying the salt file may or may not be set
-      if (parameters.isDisplaySaltMode()) {
-        System.out.println("Salt File Contents");
-        System.out.printf("  Site ID:      %s\n", hashParameters.getSiteId());
-        System.out.printf("  Site Name:    %s\n", hashParameters.getSiteName());
-        System.out.printf("  Private Salt: %s\n", hashParameters.getPrivateSalt());
-        System.out.printf("  Project Salt: %s\n", hashParameters.getProjectSalt());
-        System.out.printf("  Project ID:   %s\n", hashParameters.getProjectId());
-      }
+      Engine engine = new Engine(parameters, hashParameters);
+      engine.run();
 
-      // Hashing mode may or may not be set
-      if (parameters.isHashingMode()) {
-        Engine engine = new Engine(parameters, hashParameters);
-        engine.run();
-
-        String report = String.join("\r\n", engine.getExecutionReport());
-        System.out.println(report);
-      }
+      String report = String.join("\r\n", engine.getExecutionReport());
+      System.out.println(report);
     }
     catch (Exception exc) {
       System.out.println("ERROR - We encountered an error while processing your data file");
@@ -126,10 +92,10 @@ public class Runner {
     System.out.printf("Total execution time: %2f sec\n", elapsedSeconds);
   }
 
-  public static HashParameters parseProjectSalt(File saltFile, File privateKeyFile, int minSaltLength) throws Exception {
+  public static HashParameters parseProjectSalt(File saltFile, int minSaltLength) throws Exception {
     SaltFile file = new SaltFile();
     file.setMinSaltLength(minSaltLength);
-    file.decrypt(saltFile, privateKeyFile);
+    file.load(saltFile);
 
     HashParameters parameters = new HashParameters();
     parameters.setSiteId(file.getSiteID());
@@ -214,18 +180,6 @@ public class Runner {
     versionOpt.setRequired(false);
     options.addOption(versionOpt);
 
-    Option displaySaltOpt = new Option("ds", "displaySalt", false, "display the salt file contents");
-    displaySaltOpt.setRequired(false);
-    options.addOption(displaySaltOpt);
-
-    Option hashingOpt = new Option("h", "hashing", false, "perform hashing on an input file");
-    hashingOpt.setRequired(false);
-    options.addOption(hashingOpt);
-
-    Option keyFileOpt = new Option("key", "privateKey", true, "path to private key file");
-    keyFileOpt.setRequired(false);
-    options.addOption(keyFileOpt);
-
     Option encryptionKeyFileOpt = new Option("enc", "encryptionKey", true, "path to public key file to encrypt hashed output");
     encryptionKeyFileOpt.setRequired(false);
     options.addOption(encryptionKeyFileOpt);
@@ -250,9 +204,13 @@ public class Runner {
     delimiterOpt.setRequired(false);
     options.addOption(delimiterOpt);
 
-    Option writeUnhashedOpt = new Option("unhashed", "writeUnhashed", false, "write out the original unhashed data in the result file (for debugging");
+    Option writeUnhashedOpt = new Option("unhashed", "unhashed", false, "write out the original unhashed data in the result file (for debugging");
     writeUnhashedOpt.setRequired(false);
     options.addOption(writeUnhashedOpt);
+
+    Option writeUnencryptedOpt = new Option("unencrypted", "unencrypted", false, "write out the hashes as unencrypted text (for debugging");
+    writeUnencryptedOpt.setRequired(false);
+    options.addOption(writeUnencryptedOpt);
 
     return options;
   }
@@ -284,33 +242,26 @@ public class Runner {
    */
   public static void displayUsage() {
     System.out.println();
-    System.out.println("Usage: java -jar Hashing.jar [--hashing | --displaySalt | --version]");
+    System.out.println("Usage: java -jar Hashing.jar [--version]");
     System.out.println();
     System.out.println("HASHING");
     System.out.println("-------------");
     System.out.println("Required parameters:");
-    System.out.println("  -h,--hashing                      Perform hashing");
     System.out.println("  -date,--privateDate <arg>         The private date (as MM/DD/YYYY)");
-    System.out.println("  -key,--privateKey <arg>           Path to the private key file");
+    System.out.println("  -key,--encryptionKey <arg>        Path to the aggregator's public key file, to");
+    System.out.println("                                    encrypt results.");
     System.out.println("  -patient,--patientFile <arg>      Path to the file containing patient data");
-    System.out.println("  -salt,--saltFile <arg>            Path to encrypted salt file");
+    System.out.println("  -salt,--saltFile <arg>            Path to salt file");
     System.out.println();
     System.out.println("Optional parameters:");
     System.out.println("  -out,--outDirectory <arg>         The base directory to create output. If not");
     System.out.println("                                    specified, will use the current directory.");
     System.out.println("  -delim,--delimiter <arg>          The delimiter used within the patient data");
     System.out.println("                                    file. Uses a comma \",\" by default.");
-    System.out.println("  -unhashed,--writeUnhashed         Write out the original unhashed data in the ");
+    System.out.println("  --unhashed                        Write out the original unhashed data in the ");
     System.out.println("                                    result file (for debugging). false by default.");
-    System.out.println("  -enc,--encryptionKey              Path to a public key file to then be used to ");
-    System.out.println("                                    encrypt hashed output");
-    System.out.println();
-    System.out.println("DISPLAY SALT");
-    System.out.println("-------------");
-    System.out.println("Required parameters:");
-    System.out.println("  -ds,--displaySalt                 Display the contents of the salt file");
-    System.out.println("  -key,--privateKey <arg>           Path to the private key file");
-    System.out.println("  -salt,--saltFile <arg>            Path to encrypted salt file");
+    System.out.println("  --unencrypted                     Write out the result file as unencrypted text");
+    System.out.println("                                    (for debugging). false by default.");
     System.out.println();
   }
 }

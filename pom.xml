@@ -20,7 +20,6 @@
         <maven.surefire.version>2.22.1</maven.surefire.version>
         <commons.csv.version>1.6</commons.csv.version>
         <json.version>20180813</json.version>
-        <bouncycastle.version>1.61</bouncycastle.version>
     </properties>
 
 
@@ -80,19 +79,9 @@
         </dependency>
 
         <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk15on</artifactId>
-            <version>${bouncycastle.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcpkix-jdk15on</artifactId>
-            <version>${bouncycastle.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.linkja</groupId>
             <artifactId>linkja-core</artifactId>
-            <version>1.0.3</version>
+            <version>1.0.4</version>
         </dependency>
         <dependency>
             <groupId>org.linkja</groupId>
