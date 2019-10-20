@@ -1,0 +1,6 @@
+canonical_name,id
+first_name,FN
+last_name,LN
+date_of_birth,DOB
+social_security_number,SSN
+patient_id,PID

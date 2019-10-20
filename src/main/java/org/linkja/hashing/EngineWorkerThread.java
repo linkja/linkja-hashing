@@ -17,17 +17,19 @@ public class EngineWorkerThread implements Callable<List<DataRow>> {
   private static ArrayList<String> prefixes = null;
   private static ArrayList<String> suffixes = null;
   private static HashMap<String, String> genericNames = null;
+  private static HashMap<String, String> fieldIds = null;
   private static HashParameters hashParameters;
 
   public EngineWorkerThread(List<DataRow> dataRows, boolean runNormalizationStep, EngineParameters.RecordExclusionMode exclusionMode,
                             ArrayList<String> prefixes, ArrayList<String> suffixes, HashMap<String, String> genericNames,
-                            HashParameters hashParameters) {
+                            HashMap<String, String> fieldIds, HashParameters hashParameters) {
     this.dataRows = new ArrayList<DataRow>(dataRows);
     this.runNormalizationStep = runNormalizationStep;
     this.exclusionMode = exclusionMode;
     this.prefixes = prefixes;
     this.suffixes = suffixes;
     this.genericNames = genericNames;
+    this.fieldIds = fieldIds;
     this.hashParameters = hashParameters;
   }
 
@@ -46,7 +48,7 @@ public class EngineWorkerThread implements Callable<List<DataRow>> {
       steps.add(new ExclusionStep(this.genericNames));
     }
     steps.add(new PermuteStep());
-    steps.add(new HashingStep(this.hashParameters));
+    steps.add(new HashingStep(this.hashParameters, this.fieldIds));
 
     RecordProcessor processor = new RecordProcessor(steps);
     List<DataRow> results = new ArrayList<DataRow>();

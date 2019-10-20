@@ -52,6 +52,7 @@ public class Engine {
   private static ArrayList<String> prefixes = null;
   private static ArrayList<String> suffixes = null;
   private static HashMap<String, String> genericNames = null;
+  private static HashMap<String, String> fieldIds = null;
   private CryptoHelper cryptoHelper = new CryptoHelper();
 
   private int numSubmittedJobs = 0;
@@ -114,10 +115,23 @@ public class Engine {
         }
       }
     }
+
+    if (this.fieldIds == null) {
+      this.fieldIds = new HashMap<String, String>();
+      try (InputStream csvStream = getClass().getResourceAsStream("/configuration/field-ids.csv")) {
+        CSVParser parser = CSVParser.parse(csvStream, Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader());
+        for (CSVRecord csvRecord : parser) {
+          // We match our canonical field names as case-insensitive, but note that we want to take the mapped field ID
+          // exactly as it is entered (with the exception of leading/trailing whitespace).
+          this.fieldIds.put(csvRecord.get(0).trim().toLowerCase(), csvRecord.get(1).trim());
+        }
+      }
+    }
+
   }
 
   /**
-   * Internal conversion method to take a CSVRecord and convert it to a canoncial DataRow structure
+   * Internal conversion method to take a CSVRecord and convert it to a canonical DataRow structure
    * @param csvRecord The CSVRecord to conver
    * @return A DataRow representing the data
    */
@@ -259,7 +273,7 @@ public class Engine {
           batch.trimToSize();  // Free up unused space
           taskQueue.submit(new EngineWorkerThread(batch, this.parameters.isRunNormalizationStep(),
                   this.parameters.getRecordExclusionMode(), this.prefixes, this.suffixes, this.genericNames,
-                  this.hashParameters));
+                  this.fieldIds, this.hashParameters));
           batch.clear();  // The worker thread has its copy, so we can clear ours out to start a new batch
           this.numSubmittedJobs++;
 
@@ -286,7 +300,7 @@ public class Engine {
         batch.trimToSize();
         taskQueue.submit(new EngineWorkerThread(batch, this.parameters.isRunNormalizationStep(),
                 this.parameters.getRecordExclusionMode(), this.prefixes, this.suffixes, this.genericNames,
-                this.hashParameters));
+                this.fieldIds, this.hashParameters));
         this.numSubmittedJobs++;
       }
 
