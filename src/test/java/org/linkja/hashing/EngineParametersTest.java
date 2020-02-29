@@ -300,19 +300,6 @@ class EngineParametersTest {
   }
 
   @Test
-  void setWriteUnhashedData_Default() {
-    EngineParameters parameters = new EngineParameters();
-    assertEquals(EngineParameters.DEFAULT_WRITE_UNHASHED_DATA, parameters.isWriteUnhashedData());
-  }
-
-  @Test
-  void setWriteUnhashedData_Null() {
-    EngineParameters parameters = new EngineParameters();
-    parameters.setRunNormalizationStep(null);
-    assertEquals(EngineParameters.DEFAULT_WRITE_UNHASHED_DATA, parameters.isWriteUnhashedData());
-  }
-
-  @Test
   void setMinSaltLength_Default() {
     EngineParameters parameters = new EngineParameters();
     assertEquals(EngineParameters.DEFAULT_MIN_SALT_LENGTH, parameters.getMinSaltLength());
@@ -359,24 +346,6 @@ class EngineParametersTest {
     assertFalse(parameters.hashingModeOptionsSet());
     parameters.setPrivateDate("01/01/1900");
     // At this point both required parameters are set so it should be valid
-    assertTrue(parameters.hashingModeOptionsSet());
-  }
-
-  @Test
-  void hashingModeOptionsSet_NoEncryption() throws FileNotFoundException, ParseException {
-    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
-    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> true);
-
-    EngineParameters parameters = new EngineParameters(fileHelperMock);
-    File file = new File("/test/path/assumed/valid");
-    parameters.setSaltFile(file);
-    assertFalse(parameters.hashingModeOptionsSet());
-    parameters.setPatientFile(file);
-    assertFalse(parameters.hashingModeOptionsSet());
-    parameters.setPrivateDate("01/01/1900");
-    assertFalse(parameters.hashingModeOptionsSet());
-    // We didn't set the encryption key file.  Once we say we're not doing encryption, then hashing should be set
-    parameters.setWriteUnencryptedData(true);
     assertTrue(parameters.hashingModeOptionsSet());
   }
 }

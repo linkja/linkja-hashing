@@ -40,8 +40,6 @@ public class Runner {
       parameters.setEncryptionKeyFile(cmd.getOptionValue("encryptionKey"));
       parameters.setDelimiter(cmd.getOptionValue("delimiter", new String(new char[] { EngineParameters.DEFAULT_DELIMITER })));
       parameters.setRecordExclusionMode(parseRecordExclusionMode(cmd.getOptionValue("exclusionMode")));
-      parameters.setWriteUnhashedData(cmd.hasOption("unhashed"));
-      parameters.setWriteUnencryptedData(cmd.hasOption("unencrypted"));
       parameters = loadConfig(parameters);
       String outputDirectory = cmd.getOptionValue("outDirectory");
       if (outputDirectory == null || outputDirectory.equals("")) {
@@ -204,14 +202,6 @@ public class Runner {
     delimiterOpt.setRequired(false);
     options.addOption(delimiterOpt);
 
-    Option writeUnhashedOpt = new Option("unhashed", "unhashed", false, "write out the original unhashed data in the result file (for debugging");
-    writeUnhashedOpt.setRequired(false);
-    options.addOption(writeUnhashedOpt);
-
-    Option writeUnencryptedOpt = new Option("unencrypted", "unencrypted", false, "write out the hashes as unencrypted text (for debugging");
-    writeUnencryptedOpt.setRequired(false);
-    options.addOption(writeUnencryptedOpt);
-
     return options;
   }
 
@@ -258,10 +248,6 @@ public class Runner {
     System.out.println("                                    specified, will use the current directory.");
     System.out.println("  -delim,--delimiter <arg>          The delimiter used within the patient data");
     System.out.println("                                    file. Uses a comma \",\" by default.");
-    System.out.println("  --unhashed                        Write out the original unhashed data in the ");
-    System.out.println("                                    result file (for debugging). false by default.");
-    System.out.println("  --unencrypted                     Write out the result file as unencrypted text");
-    System.out.println("                                    (for debugging). false by default.");
     System.out.println();
   }
 }

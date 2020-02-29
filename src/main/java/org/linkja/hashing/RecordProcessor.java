@@ -35,4 +35,15 @@ public class RecordProcessor {
     }
     return row;
   }
+
+  /**
+   * Perform any necessary cleanup when all processing is complete.
+   */
+  public void cleanup() {
+    for (IStep step : this.processingSteps) {
+      if (step != null) {
+        step.cleanup();
+      }
+    }
+  }
 }

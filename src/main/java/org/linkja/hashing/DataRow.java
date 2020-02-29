@@ -13,7 +13,7 @@ import java.util.Objects;
  * identifier.  The value will be the value to used (as it may be modified by a processing step).  There are additional
  * status fields that are used to describe the state of this data row.
  */
-public class DataRow extends HashMap<String, String> implements Cloneable {
+public class DataRow extends HashMap<String, Object> implements Cloneable {
   private long rowNumber;
   private String invalidReason;
   private String warning;
@@ -184,7 +184,7 @@ public class DataRow extends HashMap<String, String> implements Cloneable {
     }
 
     final DataRow otherRow = (DataRow)obj;
-    if (!super.equals((HashMap<String, String>)otherRow)) {
+    if (!super.equals((HashMap<String, Object>)otherRow)) {
       return false;
     }
 

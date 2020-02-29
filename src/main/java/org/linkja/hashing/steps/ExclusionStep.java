@@ -33,7 +33,7 @@ public class ExclusionStep implements IStep {
 
     // TODO - Determine how dynamic we should be.
     // For now, we assume just first name and last name should be processed by these rules
-    row.setException(checkIsException(row.get(Engine.FIRST_NAME_FIELD), row.get(Engine.LAST_NAME_FIELD)));
+    row.setException(checkIsException((String)row.get(Engine.FIRST_NAME_FIELD), (String)row.get(Engine.LAST_NAME_FIELD)));
     return row;
   }
 
@@ -128,4 +128,7 @@ public class ExclusionStep implements IStep {
 
     ruleCollection.put(namePart, matchRule);
   }
+
+  @Override
+  public void cleanup() {}
 }

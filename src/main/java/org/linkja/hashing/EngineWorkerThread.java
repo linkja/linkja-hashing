@@ -1,5 +1,6 @@
 package org.linkja.hashing;
 
+import org.linkja.core.crypto.AesEncryptParameters;
 import org.linkja.hashing.steps.*;
 
 import java.util.ArrayList;
@@ -13,24 +14,29 @@ import java.util.concurrent.Callable;
 public class EngineWorkerThread implements Callable<List<DataRow>> {
   private List<DataRow> dataRows;
   private boolean runNormalizationStep;
+  private boolean runEncryptionStep;
   private EngineParameters.RecordExclusionMode exclusionMode;
   private static ArrayList<String> prefixes = null;
   private static ArrayList<String> suffixes = null;
   private static HashMap<String, String> genericNames = null;
   private static HashMap<String, String> fieldIds = null;
   private static HashParameters hashParameters;
+  private static AesEncryptParameters encryptParameters = null;
 
-  public EngineWorkerThread(List<DataRow> dataRows, boolean runNormalizationStep, EngineParameters.RecordExclusionMode exclusionMode,
+  public EngineWorkerThread(List<DataRow> dataRows, boolean runNormalizationStep, boolean runEncryptionStep,
+                            EngineParameters.RecordExclusionMode exclusionMode,
                             ArrayList<String> prefixes, ArrayList<String> suffixes, HashMap<String, String> genericNames,
-                            HashMap<String, String> fieldIds, HashParameters hashParameters) {
+                            HashMap<String, String> fieldIds, HashParameters hashParameters, AesEncryptParameters encryptParameters) {
     this.dataRows = new ArrayList<DataRow>(dataRows);
     this.runNormalizationStep = runNormalizationStep;
+    this.runEncryptionStep = runEncryptionStep;
     this.exclusionMode = exclusionMode;
     this.prefixes = prefixes;
     this.suffixes = suffixes;
     this.genericNames = genericNames;
     this.fieldIds = fieldIds;
     this.hashParameters = hashParameters;
+    this.encryptParameters = encryptParameters;
   }
 
   @Override
@@ -50,11 +56,25 @@ public class EngineWorkerThread implements Callable<List<DataRow>> {
     steps.add(new PermuteStep());
     steps.add(new HashingStep(this.hashParameters, this.fieldIds));
 
+    if (this.runEncryptionStep) {
+      steps.add(new EncryptionStep(this.encryptParameters));
+    }
+
     RecordProcessor processor = new RecordProcessor(steps);
     List<DataRow> results = new ArrayList<DataRow>();
     for (DataRow row : this.dataRows) {
       results.add(processor.run(row));
     }
+    processor.cleanup();
     return results;
+  }
+
+  /**
+   * Perform any necessary resource cleanup once the thread is no longer needed.
+   */
+  public void cleanup() {
+    if (this.runEncryptionStep && this.encryptParameters != null) {
+      this.encryptParameters.clear();
+    }
   }
 }

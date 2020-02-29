@@ -110,19 +110,19 @@ public class ValidationFilterStep implements IStep {
     boolean hasMissingError = false;
     StringBuilder missingBuilder = new StringBuilder();
     missingBuilder.append("The following fields are missing or just contain whitespace.  They must be filled in: ");
-    if (!row.containsKey(Engine.PATIENT_ID_FIELD) || row.get(Engine.PATIENT_ID_FIELD).trim().isEmpty()) {
+    if (!row.containsKey(Engine.PATIENT_ID_FIELD) || ((String)row.get(Engine.PATIENT_ID_FIELD)).trim().isEmpty()) {
       missingBuilder.append("Patient Identifier, ");
       hasMissingError = true;
     }
-    if (!row.containsKey(Engine.FIRST_NAME_FIELD) || row.get(Engine.FIRST_NAME_FIELD).trim().isEmpty()) {
+    if (!row.containsKey(Engine.FIRST_NAME_FIELD) || ((String)row.get(Engine.FIRST_NAME_FIELD)).trim().isEmpty()) {
       missingBuilder.append("First Name, ");
       hasMissingError = true;
     }
-    if (!row.containsKey(Engine.LAST_NAME_FIELD) || row.get(Engine.LAST_NAME_FIELD).trim().isEmpty()) {
+    if (!row.containsKey(Engine.LAST_NAME_FIELD) || ((String)row.get(Engine.LAST_NAME_FIELD)).trim().isEmpty()) {
       missingBuilder.append("Last Name, ");
       hasMissingError = true;
     }
-    if (!row.containsKey(Engine.DATE_OF_BIRTH_FIELD) || row.get(Engine.DATE_OF_BIRTH_FIELD).trim().isEmpty()) {
+    if (!row.containsKey(Engine.DATE_OF_BIRTH_FIELD) || ((String)row.get(Engine.DATE_OF_BIRTH_FIELD)).trim().isEmpty()) {
       missingBuilder.append("Date of Birth, ");
       hasMissingError = true;
     }
@@ -147,11 +147,11 @@ public class ValidationFilterStep implements IStep {
     boolean hasLengthError = false;
     StringBuilder lengthBuilder = new StringBuilder();
     lengthBuilder.append("The following fields must be longer than 1 character: ");
-    if (row.containsKey(Engine.FIRST_NAME_FIELD) && row.get(Engine.FIRST_NAME_FIELD).trim().length() < Engine.MIN_NAME_LENGTH) {
+    if (row.containsKey(Engine.FIRST_NAME_FIELD) && ((String)row.get(Engine.FIRST_NAME_FIELD)).trim().length() < Engine.MIN_NAME_LENGTH) {
       lengthBuilder.append("First Name, ");
       hasLengthError = true;
     }
-    if (row.containsKey(Engine.LAST_NAME_FIELD) && row.get(Engine.LAST_NAME_FIELD).trim().length() < Engine.MIN_NAME_LENGTH) {
+    if (row.containsKey(Engine.LAST_NAME_FIELD) && ((String)row.get(Engine.LAST_NAME_FIELD)).trim().length() < Engine.MIN_NAME_LENGTH) {
       lengthBuilder.append("Last Name, ");
       hasLengthError = true;
     }
@@ -176,32 +176,32 @@ public class ValidationFilterStep implements IStep {
     boolean hasFormatError = false;
     StringBuilder formatBuilder = new StringBuilder();
     formatBuilder.append("The following fields are not in a valid format: ");
-    if (row.containsKey(Engine.DATE_OF_BIRTH_FIELD) && !isValidDateFormat(row.get(Engine.DATE_OF_BIRTH_FIELD))) {
+    if (row.containsKey(Engine.DATE_OF_BIRTH_FIELD) && !isValidDateFormat((String)row.get(Engine.DATE_OF_BIRTH_FIELD))) {
       formatBuilder.append("Date of Birth (recommended to use MM/DD/YYYY format), ");
       hasFormatError = true;
     }
     if (row.containsKey(Engine.SOCIAL_SECURITY_NUMBER)) {
-      String ssnString = row.get(Engine.SOCIAL_SECURITY_NUMBER);
+      String ssnString = (String)row.get(Engine.SOCIAL_SECURITY_NUMBER);
       if (shouldValidateSSNFormat(ssnString) && !isValidSSNFormat(ssnString)) {
         formatBuilder.append("Social Security Number, ");
         hasFormatError = true;
       }
     }
     if (row.containsKey(Engine.PATIENT_ID_FIELD)) {
-      String patientIdString = row.get(Engine.PATIENT_ID_FIELD);
+      String patientIdString = (String)row.get(Engine.PATIENT_ID_FIELD);
       if (shouldValidatePatientIdentifierFormat(patientIdString) && !isValidPatientIdentifierFormat(patientIdString)){
         formatBuilder.append("Patient Identifier, ");
         hasFormatError = true;
       }
     }
     if (row.containsKey(Engine.FIRST_NAME_FIELD)) {
-      String firstNameString = row.get(Engine.FIRST_NAME_FIELD);
+      String firstNameString = (String)row.get(Engine.FIRST_NAME_FIELD);
       if (shouldValidateNameFormat(firstNameString) && !isValidNameFormat(firstNameString)) {
         formatBuilder.append("First Name, ");
         hasFormatError = true;
       }
     }if (row.containsKey(Engine.LAST_NAME_FIELD)) {
-      String lastNameString = row.get(Engine.LAST_NAME_FIELD);
+      String lastNameString = (String)row.get(Engine.LAST_NAME_FIELD);
       if (shouldValidateNameFormat(lastNameString) && !isValidNameFormat(lastNameString)) {
         formatBuilder.append("Last Name, ");
         hasFormatError = true;
@@ -343,4 +343,7 @@ public class ValidationFilterStep implements IStep {
             StringUtils.strip(additionalReason, ", ").trim()).trim();
     return reason;
   }
+
+  @Override
+  public void cleanup() {}
 }
