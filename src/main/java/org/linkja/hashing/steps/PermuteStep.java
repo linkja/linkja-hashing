@@ -6,6 +6,11 @@ import org.linkja.hashing.Engine;
 public class PermuteStep implements IStep {
   private static final String LastNameSplitPattern = "-| ";
 
+  private boolean allowDerivation;
+
+  public PermuteStep(boolean allowDerivation) {
+    this.allowDerivation = allowDerivation;
+  }
 
   @Override
   public DataRow run(DataRow row) {
@@ -14,8 +19,14 @@ public class PermuteStep implements IStep {
     }
     row.addCompletedStep(this.getStepName());
 
-    row = permuteLastName(row);
-    row.put(Engine.FIRST_NAME_FIELD, removeUnwantedCharacters((String)row.get(Engine.FIRST_NAME_FIELD)));
+    if (allowDerivation) {
+      row = permuteLastName(row);
+    }
+    else {
+      row = collapseLastName(row);
+    }
+
+    row.put(Engine.FIRST_NAME_FIELD, removeUnwantedCharacters((String) row.get(Engine.FIRST_NAME_FIELD)));
 
     return row;
   }
@@ -100,6 +111,29 @@ public class PermuteStep implements IStep {
     }
 
     return data.toUpperCase().replaceAll(INVALID_CHARACTERS_PATTERN, "").trim();
+  }
+
+  /**
+   * Given a last name, if it looks like multiple last names are included, we want to simply collapse this
+   * down to a single last name value.
+   * e.g., SMITH-JONES
+   *    DataRow LastName -> SMITHJONES
+   * @param row The data row to process
+   * @return The modified data row, or null if row is null.
+   */
+  public DataRow collapseLastName(DataRow row) {
+    if (row == null) {
+      return null;
+    }
+
+    String lastName = (String)row.get(Engine.LAST_NAME_FIELD);
+    if (lastName == null || lastName.equals("")) {
+      return row;
+    }
+
+    row.put(Engine.LAST_NAME_FIELD, removeUnwantedCharacters(lastName));
+
+    return row;
   }
 
   @Override

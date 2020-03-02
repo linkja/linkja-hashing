@@ -53,7 +53,11 @@ public class EngineWorkerThread implements Callable<List<DataRow>> {
     if (exclusionMode == EngineParameters.RecordExclusionMode.GenerateExclusions) {
       steps.add(new ExclusionStep(this.genericNames));
     }
-    steps.add(new PermuteStep());
+
+    // For the initial release, we disabled permuting last names: https://github.com/linkja/linkja-hashing/issues/13
+    // TODO: We will want to make this a configuration option in the future
+    steps.add(new PermuteStep(false));
+
     steps.add(new HashingStep(this.hashParameters, this.fieldIds));
 
     if (this.runEncryptionStep) {
