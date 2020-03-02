@@ -141,7 +141,7 @@ class ValidationFilterStepTest {
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "12/12/1912");
-    row.put(Engine.SOCIAL_SECURITY_NUMBER, "333-33-3333");
+    row.put(Engine.SOCIAL_SECURITY_NUMBER, "333-43-5333");
 
     ValidationFilterStep step = new ValidationFilterStep();
     row = step.checkFieldFormat(row);
@@ -249,7 +249,7 @@ class ValidationFilterStepTest {
     row = step.run(row);
     assertNull(row.getInvalidReason());
 
-    row.put(Engine.SOCIAL_SECURITY_NUMBER, "333-33 3333");
+    row.put(Engine.SOCIAL_SECURITY_NUMBER, "333-33 4333");
     row = step.run(row);
     assertNull(row.getInvalidReason());
   }
@@ -342,10 +342,10 @@ class ValidationFilterStepTest {
   @Test
   void isValidSSNFormat_Valid() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assert(step.isValidSSNFormat("123-45-6789"));   // 9 digits with hyphen delimiters
-    assert(step.isValidSSNFormat("123 45 6789"));   // 9 digits with space delimiters
-    assert(step.isValidSSNFormat("123 45-6789"));   // 9 digits with mixed delimiters
-    assert(step.isValidSSNFormat("123456789"));     // 9 digits with no delimiters
+    assert(step.isValidSSNFormat("123-45-6780"));   // 9 digits with hyphen delimiters
+    assert(step.isValidSSNFormat("123 45 6780"));   // 9 digits with space delimiters
+    assert(step.isValidSSNFormat("123 45-6780"));   // 9 digits with mixed delimiters
+    assert(step.isValidSSNFormat("123456780"));     // 9 digits with no delimiters
     assert(step.isValidSSNFormat("1234"));          // Has to be at least 4 characters
     assert(step.isValidSSNFormat("987456789"));     // Even though this is a TIN, we accept it
 
@@ -364,18 +364,66 @@ class ValidationFilterStepTest {
     assertFalse(step.isValidSSNFormat("123"));          // Too short
     assertFalse(step.isValidSSNFormat("123A"));         // Right length, but non-numeric character
     assertFalse(step.isValidSSNFormat("1234567890"));   // Too long
+
+    // http://www.dhs.state.il.us/page.aspx?item=14444
+    assertFalse(step.isValidSSNFormat("123456789"));   // Sequential numbers
+    assertFalse(step.isValidSSNFormat("444444444"));   // 9 identical digits
   }
 
   @Test
   void isValidSSNFormat_Invalid_ZeroSegments() {
     ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidSSNFormat("000-00-0000"));  // All 0s is a common invalid SSN in practice
     assertFalse(step.isValidSSNFormat("000-12-3456"));
     assertFalse(step.isValidSSNFormat("123-00-4567"));
     assertFalse(step.isValidSSNFormat("123-45-0000"));
     // Same checks, without delimiters
+    assertFalse(step.isValidSSNFormat("000000000"));    // All 0s is a common invalid SSN in practice
     assertFalse(step.isValidSSNFormat("000123456"));
     assertFalse(step.isValidSSNFormat("123004567"));
     assertFalse(step.isValidSSNFormat("123450000"));
+  }
+
+  @Test
+  void isValidSSNFormat_Valid_ZeroSegments() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertTrue(step.isValidSSNFormat("100-02-3456"));
+    assertTrue(step.isValidSSNFormat("123-10-0567"));
+    assertTrue(step.isValidSSNFormat("120-01-4567"));
+    assertTrue(step.isValidSSNFormat("123-40-0001"));
+    // Same checks, without delimiters
+    assertTrue(step.isValidSSNFormat("100023456"));
+    assertTrue(step.isValidSSNFormat("123100567"));
+    assertTrue(step.isValidSSNFormat("120014567"));
+    assertTrue(step.isValidSSNFormat("123400001"));
+  }
+
+  @Test
+  void isValidSSNFormat_Invalid_NineSegments() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidSSNFormat("999-99-9999"));  // All 9s is a common invalid SSN in practice
+    assertFalse(step.isValidSSNFormat("999-12-3456"));
+    assertFalse(step.isValidSSNFormat("123-99-4567"));
+    assertFalse(step.isValidSSNFormat("123-45-9999"));
+    // Same checks, without delimiters
+    assertFalse(step.isValidSSNFormat("999999999"));    // All 9s is a common invalid SSN in practice
+    assertFalse(step.isValidSSNFormat("999123456"));
+    assertFalse(step.isValidSSNFormat("123994567"));
+    assertFalse(step.isValidSSNFormat("123459999"));
+  }
+
+  @Test
+  void isValidSSNFormat_Valid_NineSegments() {
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertTrue(step.isValidSSNFormat("199-92-3456"));
+    assertTrue(step.isValidSSNFormat("123-19-9567"));
+    assertTrue(step.isValidSSNFormat("129-91-4567"));
+    assertTrue(step.isValidSSNFormat("123-49-9991"));
+    // Same checks, without delimiters
+    assertTrue(step.isValidSSNFormat("199923456"));
+    assertTrue(step.isValidSSNFormat("123199567"));
+    assertTrue(step.isValidSSNFormat("129914567"));
+    assertTrue(step.isValidSSNFormat("123499991"));
   }
 
   @Test
@@ -383,6 +431,8 @@ class ValidationFilterStepTest {
     ValidationFilterStep step = new ValidationFilterStep();
     assertFalse(step.isValidSSNFormat("078-05-1120"));
     assertFalse(step.isValidSSNFormat("078051120"));
+    assertFalse(step.isValidSSNFormat("123-45-6789"));
+    assertFalse(step.isValidSSNFormat("123456789"));
   }
 
   @Test

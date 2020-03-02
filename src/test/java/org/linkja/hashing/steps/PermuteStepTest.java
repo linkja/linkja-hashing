@@ -13,7 +13,7 @@ class PermuteStepTest {
 
   @Test
   void permuteLastName_NullEmpty() {
-    PermuteStep step = new PermuteStep();
+    PermuteStep step = new PermuteStep(true);
     assertNull(step.permuteLastName(null));
 
     DataRow emptyRow = step.permuteLastName(new DataRow());
@@ -32,8 +32,28 @@ class PermuteStepTest {
   }
 
   @Test
+  void collapseLastName_NullEmpty() {
+    PermuteStep step = new PermuteStep(false);
+    assertNull(step.collapseLastName(null));
+
+    DataRow emptyRow = step.collapseLastName(new DataRow());
+    assertNull(emptyRow.get(Engine.LAST_NAME_FIELD));
+    assertNull(emptyRow.getDerivedRows());
+
+    emptyRow.put(Engine.LAST_NAME_FIELD, "");
+    assertEquals("", emptyRow.get(Engine.LAST_NAME_FIELD));
+    assertNull(emptyRow.getDerivedRows());
+
+
+    emptyRow.put(Engine.LAST_NAME_FIELD, "       ");
+    emptyRow = step.collapseLastName(emptyRow);
+    assertEquals("", emptyRow.get(Engine.LAST_NAME_FIELD));
+    assertNull(emptyRow.getDerivedRows());
+  }
+
+  @Test
   void permuteLastName_SingleName() {
-    PermuteStep step = new PermuteStep();
+    PermuteStep step = new PermuteStep(true);
     DataRow emptyRow = step.permuteLastName(new DataRow());
     emptyRow.put(Engine.LAST_NAME_FIELD, "SMITH");
     assertEquals("SMITH", emptyRow.get(Engine.LAST_NAME_FIELD));
@@ -41,8 +61,17 @@ class PermuteStepTest {
   }
 
   @Test
+  void collapseLastName_SingleName() {
+    PermuteStep step = new PermuteStep(false);
+    DataRow emptyRow = step.collapseLastName(new DataRow());
+    emptyRow.put(Engine.LAST_NAME_FIELD, "SMITH");
+    assertEquals("SMITH", emptyRow.get(Engine.LAST_NAME_FIELD));
+    assertNull(emptyRow.getDerivedRows());
+  }
+
+  @Test
   void permuteLastName_TwoNames() {
-    PermuteStep step = new PermuteStep();
+    PermuteStep step = new PermuteStep(true);
     String expectedOriginalLastName = "SMITHOLSON";
     for (String delimiter : DELIMITERS) {
       DataRow row = new DataRow();
@@ -57,8 +86,21 @@ class PermuteStepTest {
   }
 
   @Test
+  void collapseLastName_TwoNames() {
+    PermuteStep step = new PermuteStep(false);
+    String expectedOriginalLastName = "SMITHOLSON";
+    for (String delimiter : DELIMITERS) {
+      DataRow row = new DataRow();
+      row.put(Engine.LAST_NAME_FIELD, String.format("SMITH%sOLSON", delimiter));
+      row = step.collapseLastName(row);
+      assertEquals(expectedOriginalLastName, row.get(Engine.LAST_NAME_FIELD));
+      assertFalse(row.hasDerivedRows());
+    }
+  }
+
+  @Test
   void permuteLastName_TwoNamesSame() {
-    PermuteStep step = new PermuteStep();
+    PermuteStep step = new PermuteStep(true);
     String expectedOriginalLastName = "SMITHSMITH";
     for (String delimiter : DELIMITERS) {
       DataRow row = new DataRow();
@@ -73,7 +115,7 @@ class PermuteStepTest {
 
   @Test
   void permuteLastName_TwoNamesTooShort() {
-    PermuteStep step = new PermuteStep();
+    PermuteStep step = new PermuteStep(true);
     String expectedOriginalLastName = "DC";
     for (String delimiter : DELIMITERS) {
       DataRow row = new DataRow();
@@ -89,7 +131,7 @@ class PermuteStepTest {
 
   @Test
   void permuteLastName_TwoNamesFirstTooShort() {
-    PermuteStep step = new PermuteStep();
+    PermuteStep step = new PermuteStep(true);
     String expectedOriginalLastName = "FSECOND";
     for (String delimiter : DELIMITERS) {
       DataRow row = new DataRow();
@@ -104,7 +146,7 @@ class PermuteStepTest {
 
   @Test
   void permuteLastName_TwoNamesSecondTooShort() {
-    PermuteStep step = new PermuteStep();
+    PermuteStep step = new PermuteStep(true);
     String expectedOriginalLastName = "FIRSTS";
     for (String delimiter : DELIMITERS) {
       DataRow row = new DataRow();
@@ -119,7 +161,7 @@ class PermuteStepTest {
 
   @Test
   void permuteLastName_SeveralNames() {
-    PermuteStep step = new PermuteStep();
+    PermuteStep step = new PermuteStep(true);
     for (String delimiter : DELIMITERS) {
       DataRow row = new DataRow();
       row.put(Engine.LAST_NAME_FIELD, String.format("SMITH%sOLSON%sJONES%sDOE", delimiter, delimiter, delimiter));
@@ -133,6 +175,18 @@ class PermuteStepTest {
   }
 
   @Test
+  void collapseLastName_SeveralNames() {
+    PermuteStep step = new PermuteStep(false);
+    for (String delimiter : DELIMITERS) {
+      DataRow row = new DataRow();
+      row.put(Engine.LAST_NAME_FIELD, String.format("SMITH%sOLSON%sJONES%sDOE", delimiter, delimiter, delimiter));
+      row = step.collapseLastName(row);
+      assertEquals("SMITHOLSONJONESDOE", row.get(Engine.LAST_NAME_FIELD));
+      assertFalse(row.hasDerivedRows());
+    }
+  }
+
+  @Test
   void run_TracksCompletedStep() {
     DataRow row = new DataRow() {{
       put(Engine.FIRST_NAME_FIELD, "JOE ");
@@ -140,7 +194,7 @@ class PermuteStepTest {
       put(Engine.LAST_NAME_FIELD, "SMITH");
     }};
 
-    PermuteStep step = new PermuteStep();
+    PermuteStep step = new PermuteStep(true);
     row = step.run(row);
     assert(row.hasCompletedStep(step.getStepName()));
   }
@@ -154,7 +208,7 @@ class PermuteStepTest {
     }};
 
     row.setInvalidReason("Invalid for testing purposes");
-    PermuteStep step = new PermuteStep();
+    PermuteStep step = new PermuteStep(true);
     row = step.run(row);
     assertFalse(row.hasCompletedStep(step.getStepName()));
   }
@@ -167,7 +221,7 @@ class PermuteStepTest {
       put(Engine.LAST_NAME_FIELD, " SMITH ");
     }};
 
-    PermuteStep step = new PermuteStep();
+    PermuteStep step = new PermuteStep(true);
     row = step.run(row);
     assertEquals("JOELLEN", row.get(Engine.FIRST_NAME_FIELD));
     assertEquals("SMITH", row.get(Engine.LAST_NAME_FIELD));

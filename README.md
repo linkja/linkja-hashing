@@ -29,7 +29,9 @@ This will compile the code, run all unit tests, and create an executable JAR fil
 You can run the executable JAR file using the standard Java command:
 `java -jar Hashing-1.0-jar-with-dependencies.jar `
 
-The program has two modes that can be invoked - the primary one (enabled with `--hashing`) will perform the hashing operations on an input file.  The second mode (which can be used by itself or with hashing) is enabled with `--displaySalt`.  This will decrypt and display the contents of the salt file.  More information about the parameters needed for each of the modes is shown below.
+By default, the program will perform the hashing operations on an input file.  More information about the parameters needed to run hashing is shown below.
+
+If you specify `--version`, the program will display the application version and the signature of the linkja-crypto library that it is using.  
 
 Note that where files are used for input, they can be specified as a relative or absolute path.
 
@@ -40,9 +42,10 @@ The program is expecting a minimum of four parameters:
 
 ```
  -date,--privateDate <arg>         The private date (as MM/DD/YYYY)
- -key,--privateKey <arg>           Path to the private key file
+ -key,--encryptionKey <arg>        Path to the aggregator's public key file, to
+                                   encrypt results.
  -patient,--patientFile <arg>      Path to the file containing patient data
- -salt,--saltFile <arg>            Path to encrypted salt file
+ -salt,--saltFile <arg>            Path to the salt file
 ```
 
 There are additional optional parameters that you may also specify:
@@ -52,10 +55,10 @@ There are additional optional parameters that you may also specify:
                                    specified, will use the current directory.
  -delim,--delimiter <arg>          The delimiter used within the patient data
                                    file. Uses a comma "," by default.
- -unhashed,--writeUnhashed         Write out the original unhashed data in the 
+ --unhashed                        Write out the original unhashed data in the 
                                    result file (for debugging). false by default.
- -enc,--encryptionKey              Path to a public key file to then be used to 
-                                   encrypt hashed output
+ --unencrypted                     Write out the result file as unencrypted text
+                                   (for debugging). false by default.
 ```
 
 **Examples:**
@@ -64,33 +67,15 @@ Required parameters specified
 
 ```
 java -jar Hashing-1.0-jar-with-dependencies.jar --hashing
-    --privateKey ./keys/private.key --saltFile ./data/project1_stalt_encrypted.txt
+    --publicKey ./keys/public.key --saltFile ./data/project1_salt.txt
     --patientFile ./data/project1_patients.csv --privateDate 01/01/2018
 ```
 
-Pipe delimited file as input, and specify the output.  Also includes writing out the unhashed data for debugging.
+Pipe delimited file as input, and specify the output.  Also includes writing out the unhashed data as unencrypted text for debugging.
 
 ```
 java -jar Hashing-1.0-jar-with-dependencies.jar --hashing
-    --privateKey ./keys/private.key --saltFile ./data/project1_stalt_encrypted.txt
+    --publicKey ./keys/public.key --saltFile ./data/project1_salt.txt
     --patientFile ./data/project1_patients.csv --privateDate 01/01/2018
-    --outDirectory ./data/output/ --delimiter | --writeUnhashed
-```
-
-
-### Display Salt
-Usage: `java -jar Hashing-1.0-jar-with-dependencies.jar --displaySalt`
-
-The program is expecting a minimum of two parameters:
-
-```
- -key,--privateKey <arg>           Path to the private key file
- -salt,--saltFile <arg>            Path to encrypted salt file
-```
-
-**Example:**
-
-```
-java -jar Hashing-1.0-jar-with-dependencies.jar --displaySalt
-    --privateKey ./keys/private.key --saltFile ./data/project1_stalt_encrypted.txt
+    --outDirectory ./data/output/ --delimiter | --unhashed --unencrypted
 ```

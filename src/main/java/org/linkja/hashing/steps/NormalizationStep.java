@@ -36,9 +36,9 @@ public class NormalizationStep implements IStep {
     }
     row.addCompletedStep(this.getStepName());
 
-    for (Map.Entry<String, String> entry : row.entrySet()) {
+    for (Map.Entry<String, Object> entry : row.entrySet()) {
       String fieldName = entry.getKey();
-      String fieldValue = normalizeString(entry.getValue());
+      String fieldValue = normalizeString((String)entry.getValue());
       // TODO - Determine if we need to make our processing more dynamic.
       // For now we will assume just the first and last name canonical fields get processed
       if (fieldName.equals(Engine.FIRST_NAME_FIELD)) {
@@ -209,4 +209,7 @@ public class NormalizationStep implements IStep {
   public String normalizeDate(String date) {
     return LocalDate.parse(date, ValidationFilterStep.DATE_OF_BIRTH_FORMATTER).format(NORMALIZED_DATE_OF_BIRTH_FORMAT);
   }
+
+  @Override
+  public void cleanup() {}
 }

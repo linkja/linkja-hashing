@@ -17,6 +17,9 @@ class RecordProcessorTest {
     public String getStepName() {
       return this.getClass().getSimpleName();
     }
+
+    @Override
+    public void cleanup() {}
   }
 
   @Test

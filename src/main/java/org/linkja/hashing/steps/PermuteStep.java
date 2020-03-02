@@ -6,6 +6,11 @@ import org.linkja.hashing.Engine;
 public class PermuteStep implements IStep {
   private static final String LastNameSplitPattern = "-| ";
 
+  private boolean allowDerivation;
+
+  public PermuteStep(boolean allowDerivation) {
+    this.allowDerivation = allowDerivation;
+  }
 
   @Override
   public DataRow run(DataRow row) {
@@ -14,8 +19,14 @@ public class PermuteStep implements IStep {
     }
     row.addCompletedStep(this.getStepName());
 
-    row = permuteLastName(row);
-    row.put(Engine.FIRST_NAME_FIELD, removeUnwantedCharacters(row.get(Engine.FIRST_NAME_FIELD)));
+    if (allowDerivation) {
+      row = permuteLastName(row);
+    }
+    else {
+      row = collapseLastName(row);
+    }
+
+    row.put(Engine.FIRST_NAME_FIELD, removeUnwantedCharacters((String) row.get(Engine.FIRST_NAME_FIELD)));
 
     return row;
   }
@@ -48,7 +59,7 @@ public class PermuteStep implements IStep {
 
     // TODO - Determine how flexible we want to be
     // For now, assume we are only doing name permutations on the last name
-    String lastName = row.get(Engine.LAST_NAME_FIELD);
+    String lastName = (String)row.get(Engine.LAST_NAME_FIELD);
     if (lastName == null || lastName.equals("")) {
       return row;
     }
@@ -72,14 +83,14 @@ public class PermuteStep implements IStep {
     // Before adding each name part, make sure we only include them if it's at least as long as our minimum required
     // name.  This will allow "D C" as a last name, but "D" and "C" would not be derived last names.
     firstPartRow.put(Engine.LAST_NAME_FIELD, firstPart);
-    if (firstPartRow.get(Engine.LAST_NAME_FIELD).length() >= Engine.MIN_NAME_LENGTH) {
+    if (((String)firstPartRow.get(Engine.LAST_NAME_FIELD)).length() >= Engine.MIN_NAME_LENGTH) {
       row.addDerivedRow(firstPartRow);
     }
 
     // For the 2nd part of the split name, make sure it isn't an exact match of the first (e.g., SMITH SMITH).  We
     // only want distinct permutations of the last name.
     lastPartRow.put(Engine.LAST_NAME_FIELD, lastPart);
-    if (lastPartRow.get(Engine.LAST_NAME_FIELD).length() >= Engine.MIN_NAME_LENGTH
+    if (((String)lastPartRow.get(Engine.LAST_NAME_FIELD)).length() >= Engine.MIN_NAME_LENGTH
     && !firstPart.equals(lastPart)) {
       row.addDerivedRow(lastPartRow);
     }
@@ -101,4 +112,30 @@ public class PermuteStep implements IStep {
 
     return data.toUpperCase().replaceAll(INVALID_CHARACTERS_PATTERN, "").trim();
   }
+
+  /**
+   * Given a last name, if it looks like multiple last names are included, we want to simply collapse this
+   * down to a single last name value.
+   * e.g., SMITH-JONES
+   *    DataRow LastName -> SMITHJONES
+   * @param row The data row to process
+   * @return The modified data row, or null if row is null.
+   */
+  public DataRow collapseLastName(DataRow row) {
+    if (row == null) {
+      return null;
+    }
+
+    String lastName = (String)row.get(Engine.LAST_NAME_FIELD);
+    if (lastName == null || lastName.equals("")) {
+      return row;
+    }
+
+    row.put(Engine.LAST_NAME_FIELD, removeUnwantedCharacters(lastName));
+
+    return row;
+  }
+
+  @Override
+  public void cleanup() {}
 }

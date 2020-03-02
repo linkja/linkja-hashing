@@ -20,4 +20,9 @@ public interface IStep {
    * @return
    */
   String getStepName();
+
+  /**
+   * Perform any necessary cleanup steps when processing is all complete
+   */
+  void cleanup();
 }

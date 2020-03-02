@@ -16,36 +16,6 @@ import java.time.format.DateTimeParseException;
 import static org.junit.jupiter.api.Assertions.*;
 
 class EngineParametersTest {
-
-  @Test
-  void setPrivateKeyFile_Found() throws FileNotFoundException {
-    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
-    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> true);
-
-    EngineParameters parameters = new EngineParameters(fileHelperMock);
-    File file = new File("/test/path/assumed/valid");
-    parameters.setPrivateKeyFile(file);
-    assertEquals(file.getPath(), parameters.getPrivateKeyFile().getPath());
-
-    // Test with string parameter
-    String filePath = file.getPath();
-    parameters.setPrivateKeyFile(filePath);
-    assertEquals(filePath, parameters.getPrivateKeyFile().getPath());
-  }
-
-  @Test
-  void setPrivateKeyFile_NotFound() {
-    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
-    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> false);
-
-    EngineParameters parameters = new EngineParameters(fileHelperMock);
-    File file = new File("/test/path/assumed/invalid");
-    assertThrows(FileNotFoundException.class, () -> parameters.setPrivateKeyFile(file));
-
-    String filePath = "/test/path/assumed/invalid";
-    assertThrows(FileNotFoundException.class, () -> parameters.setPrivateKeyFile(filePath));
-  }
-
   @Test
   void setSaltFile_Found() throws FileNotFoundException {
     FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
@@ -330,19 +300,6 @@ class EngineParametersTest {
   }
 
   @Test
-  void setWriteUnhashedData_Default() {
-    EngineParameters parameters = new EngineParameters();
-    assertEquals(EngineParameters.DEFAULT_WRITE_UNHASHED_DATA, parameters.isWriteUnhashedData());
-  }
-
-  @Test
-  void setWriteUnhashedData_Null() {
-    EngineParameters parameters = new EngineParameters();
-    parameters.setRunNormalizationStep(null);
-    assertEquals(EngineParameters.DEFAULT_WRITE_UNHASHED_DATA, parameters.isWriteUnhashedData());
-  }
-
-  @Test
   void setMinSaltLength_Default() {
     EngineParameters parameters = new EngineParameters();
     assertEquals(EngineParameters.DEFAULT_MIN_SALT_LENGTH, parameters.getMinSaltLength());
@@ -369,27 +326,8 @@ class EngineParametersTest {
   }
 
   @Test
-  void setDisplaySaltContents_Default() {
-    EngineParameters parameters = new EngineParameters();
-    assertEquals(EngineParameters.DEFAULT_DISPLAY_SALT_MODE, parameters.isDisplaySaltMode());
-  }
-
-  @Test
-  void setHashingMode_Default() {
-    EngineParameters parameters = new EngineParameters();
-    assertEquals(EngineParameters.DEFAULT_HASHING_MODE, parameters.isHashingMode());
-  }
-
-  @Test
   void hashingModeOptionsSet_Default() {
     EngineParameters parameters = new EngineParameters();
-    assertFalse(parameters.hashingModeOptionsSet());
-  }
-
-  @Test
-  void hashingModeOptionsSet_HashingNotEnabled() {
-    EngineParameters parameters = new EngineParameters();
-    parameters.setHashingMode(false);
     assertFalse(parameters.hashingModeOptionsSet());
   }
 
@@ -399,9 +337,8 @@ class EngineParametersTest {
     Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> true);
 
     EngineParameters parameters = new EngineParameters(fileHelperMock);
-    parameters.setHashingMode(true);
     File file = new File("/test/path/assumed/valid");
-    parameters.setPrivateKeyFile(file);
+    parameters.setEncryptionKeyFile(file);
     assertFalse(parameters.hashingModeOptionsSet());
     parameters.setSaltFile(file);
     assertFalse(parameters.hashingModeOptionsSet());
@@ -410,42 +347,5 @@ class EngineParametersTest {
     parameters.setPrivateDate("01/01/1900");
     // At this point both required parameters are set so it should be valid
     assertTrue(parameters.hashingModeOptionsSet());
-  }
-
-  @Test
-  void displaySaltModeOptionsSet_Default() {
-    EngineParameters parameters = new EngineParameters();
-    assertFalse(parameters.displaySaltModeOptionsSet());
-  }
-
-  @Test
-  void displaySaltModeOptionsSet_DisplaySaltNotEnabled() throws FileNotFoundException {
-    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
-    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> true);
-
-    EngineParameters parameters = new EngineParameters(fileHelperMock);
-    parameters.setDisplaySaltMode(false);
-    assertFalse(parameters.displaySaltModeOptionsSet());
-
-    // Even after setting the required parameters, it's not enabled because the mode is still turned off
-    File file = new File("/test/path/assumed/valid");
-    parameters.setPrivateKeyFile(file);
-    parameters.setSaltFile(file);
-    assertFalse(parameters.displaySaltModeOptionsSet());
-  }
-
-  @Test
-  void displaySaltModeOptionsSet_IncrementalSet() throws FileNotFoundException {
-    FileHelper fileHelperMock = Mockito.mock(FileHelper.class);
-    Mockito.when(fileHelperMock.exists(Mockito.any(File.class))).thenAnswer(invoke -> true);
-
-    EngineParameters parameters = new EngineParameters(fileHelperMock);
-    parameters.setDisplaySaltMode(true);
-    File file = new File("/test/path/assumed/valid");
-    parameters.setPrivateKeyFile(file);
-    assertFalse(parameters.displaySaltModeOptionsSet());
-    parameters.setSaltFile(file);
-    // At this point both required parameters are set so it should be valid
-    assertTrue(parameters.displaySaltModeOptionsSet());
   }
 }

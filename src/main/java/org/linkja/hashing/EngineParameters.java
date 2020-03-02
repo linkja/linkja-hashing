@@ -26,14 +26,10 @@ public class EngineParameters {
   public static final int DEFAULT_WORKER_THREADS = 3;
   public static final int DEFAULT_BATCH_SIZE = 1000;
   public static final boolean DEFAULT_RUN_NORMALIZATION_STEP = true;
-  public static final boolean DEFAULT_WRITE_UNHASHED_DATA = false;
-  public static final int DEFAULT_MIN_SALT_LENGTH = 13;
-  public static final boolean DEFAULT_DISPLAY_SALT_MODE = false;
-  public static final boolean DEFAULT_HASHING_MODE = true;
+  public static final int DEFAULT_MIN_SALT_LENGTH = 32;
 
   public static final DateTimeFormatter PrivateDateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
-  private File privateKeyFile;
   private File encryptionKeyFile;
   private File saltFile;
   private File patientFile;
@@ -45,10 +41,7 @@ public class EngineParameters {
   private int batchSize = DEFAULT_BATCH_SIZE;
   private boolean runNormalizationStep = DEFAULT_RUN_NORMALIZATION_STEP;
   private FileHelper fileHelper;
-  private boolean writeUnhashedData = DEFAULT_WRITE_UNHASHED_DATA;
   private int minSaltLength = DEFAULT_MIN_SALT_LENGTH;
-  private boolean displaySaltMode = DEFAULT_DISPLAY_SALT_MODE;
-  private boolean hashingMode = DEFAULT_HASHING_MODE;
 
   public EngineParameters() {
     fileHelper = new FileHelper();
@@ -67,43 +60,10 @@ public class EngineParameters {
    * @return
    */
   public boolean hashingModeOptionsSet() {
-    if (!this.isHashingMode()) {
-      return false;
-    }
-
-    return (getPrivateKeyFile() != null)
+    return getEncryptionKeyFile() != null
             && (getSaltFile() != null)
             && (getPatientFile() != null)
             && (getPrivateDate() != null);
-  }
-
-  /**
-   * Determine if all required parameters are set for displaying the salt file contents
-   * @return
-   */
-  public boolean displaySaltModeOptionsSet() {
-    if (!this.isDisplaySaltMode()) {
-      return false;
-    }
-
-    return (getPrivateKeyFile() != null)
-            && (getSaltFile() != null);
-  }
-
-  public File getPrivateKeyFile() {
-    return privateKeyFile;
-  }
-
-  public void setPrivateKeyFile(File privateKeyFile) throws FileNotFoundException {
-    if (!fileHelper.exists(privateKeyFile)) {
-      throw new FileNotFoundException(String.format("Unable to find private key file %s", privateKeyFile.toString()));
-    }
-    this.privateKeyFile = privateKeyFile;
-  }
-
-  public void setPrivateKeyFile(String privateKeyFile) throws FileNotFoundException {
-    File file = new File(privateKeyFile);
-    setPrivateKeyFile(file);
   }
 
   public File getEncryptionKeyFile() {
@@ -257,14 +217,6 @@ public class EngineParameters {
             EngineParameters.DEFAULT_RUN_NORMALIZATION_STEP : Boolean.parseBoolean(runNormalization.trim());
   }
 
-  public boolean isWriteUnhashedData() {
-    return writeUnhashedData;
-  }
-
-  public void setWriteUnhashedData(boolean writeUnhashedData) {
-    this.writeUnhashedData = writeUnhashedData;
-  }
-
   public int getBatchSize() {
     return batchSize;
   }
@@ -293,21 +245,5 @@ public class EngineParameters {
 
   public void setMinSaltLength(String minSaltLength) {
     setMinSaltLength((minSaltLength == null) ? -1 : Integer.parseInt(minSaltLength.trim()));
-  }
-
-  public boolean isDisplaySaltMode() {
-    return displaySaltMode;
-  }
-
-  public void setDisplaySaltMode(boolean displaySaltMode) {
-    this.displaySaltMode = displaySaltMode;
-  }
-
-  public boolean isHashingMode() {
-    return hashingMode;
-  }
-
-  public void setHashingMode(boolean hashingMode) {
-    this.hashingMode = hashingMode;
   }
 }

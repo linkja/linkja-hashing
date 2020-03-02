@@ -4,6 +4,11 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+import org.linkja.core.crypto.AesEncryptParameters;
+import org.linkja.crypto.AesResult;
+import org.linkja.crypto.Library;
 import org.linkja.hashing.steps.*;
 import org.linkja.core.*;
 
@@ -24,6 +29,15 @@ public class Engine {
 
   // Global rules that may be needed across multiple processing steps
   public static final int MIN_NAME_LENGTH = 2;
+
+  public static final String ENCRYPTION_ALGORITHM = "AES-256";
+  public static final int AES_KEY_LENGTH = 32;  // AES-256
+  public static final int AES_IV_LENGTH = 12;   // NIST recommended length for AES-256 w/ GCM (https://csrc.nist.gov/publications/detail/sp/800-38d/final)
+  public static final int AES_AAD_LENGTH = 256; // Somewhat arbitrary length for additional authenticated data (AAD)
+  public static final int AES_TAG_LENGTH = 16;
+  private static final int AES_BLOCK_LENGTH = 128;
+
+  private static final byte[] EMPTY_HASH = new byte[AES_TAG_LENGTH + AES_BLOCK_LENGTH];
 
   // List the canonical names for anticipated fields
   public static final String PATIENT_ID_FIELD = "patient_id";
@@ -52,7 +66,7 @@ public class Engine {
   private static ArrayList<String> prefixes = null;
   private static ArrayList<String> suffixes = null;
   private static HashMap<String, String> genericNames = null;
-  private CryptoHelper cryptoHelper = new CryptoHelper();
+  private static HashMap<String, String> fieldIds = null;
 
   private int numSubmittedJobs = 0;
   private int numCompletedJobs = 0;
@@ -114,10 +128,23 @@ public class Engine {
         }
       }
     }
+
+    if (this.fieldIds == null) {
+      this.fieldIds = new HashMap<String, String>();
+      try (InputStream csvStream = getClass().getResourceAsStream("/configuration/field-ids.csv")) {
+        CSVParser parser = CSVParser.parse(csvStream, Charset.defaultCharset(), CSVFormat.DEFAULT.withHeader());
+        for (CSVRecord csvRecord : parser) {
+          // We match our canonical field names as case-insensitive, but note that we want to take the mapped field ID
+          // exactly as it is entered (with the exception of leading/trailing whitespace).
+          this.fieldIds.put(csvRecord.get(0).trim().toLowerCase(), csvRecord.get(1).trim());
+        }
+      }
+    }
+
   }
 
   /**
-   * Internal conversion method to take a CSVRecord and convert it to a canoncial DataRow structure
+   * Internal conversion method to take a CSVRecord and convert it to a canonical DataRow structure
    * @param csvRecord The CSVRecord to conver
    * @return A DataRow representing the data
    */
@@ -133,14 +160,15 @@ public class Engine {
 
   /**
    * Helper method to attempt closing all of our file writers
-   * @param hashWriter
+   * @param hashStream
    * @param crosswalkWriter
    * @param invalidDataWriter
    * @throws IOException
    */
-  private void closeWriters(BufferedWriter hashWriter, BufferedWriter crosswalkWriter, BufferedWriter invalidDataWriter, BufferedWriter combinedHashedUnhashedWriter) throws IOException {
-    if (hashWriter != null) {
-      hashWriter.close();
+  private void closeWriters(BufferedOutputStream hashStream, BufferedWriter crosswalkWriter, BufferedWriter invalidDataWriter) throws IOException {
+    if (hashStream != null) {
+      hashStream.flush();
+      hashStream.close();
     }
 
     if (crosswalkWriter != null) {
@@ -149,10 +177,6 @@ public class Engine {
 
     if (invalidDataWriter != null) {
       invalidDataWriter.close();
-    }
-
-    if (combinedHashedUnhashedWriter != null) {
-      combinedHashedUnhashedWriter.close();
     }
   }
 
@@ -186,9 +210,8 @@ public class Engine {
       // for a file mixing hashes and PHI.
       String fileTimestamp = LocalDateTime.now().format(fileTimestampFormatter);
       Path hashPath = Paths.get(this.parameters.getOutputDirectory().toString(),
-              String.format("hashes_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp));
-      BufferedWriter hashWriter = Files.newBufferedWriter(hashPath);
-      CSVPrinter hashPrinter = createHashPrinter(hashWriter);
+              String.format("hashes_%s_%s_%s.enc", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp));
+      BufferedOutputStream hashStream = new BufferedOutputStream(Files.newOutputStream(hashPath));
 
       Path crosswalkPath = Paths.get(this.parameters.getOutputDirectory().toString(),
               String.format("DONOTSEND_crosswalk_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp));
@@ -200,27 +223,7 @@ public class Engine {
       BufferedWriter invalidDataWriter = Files.newBufferedWriter(invalidDataPath);
       CSVPrinter invalidDataPrinter = createInvalidDataPrinter(invalidDataWriter);
 
-      Path combinedHashedUnhashedPath = null;
-      BufferedWriter combinedHashedUnhashedWriter = null;
-      CSVPrinter combinedHashedUnhashedPrinter = null;
-
-      if (parameters.isWriteUnhashedData()) {
-        combinedHashedUnhashedPath = Paths.get(this.parameters.getOutputDirectory().toString(),
-                String.format("DONOTSEND_reviewonly_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp));
-        combinedHashedUnhashedWriter = Files.newBufferedWriter(combinedHashedUnhashedPath);
-        combinedHashedUnhashedPrinter = createCombinedHashedUnhashedPrinter(combinedHashedUnhashedWriter);
-      }
-
-      Path encryptedHashKeyPath = null;
-      Path encryptedHashDataPath = null;
-      if (parameters.isEncryptingOutput()) {
-        encryptedHashKeyPath = Paths.get(this.parameters.getOutputDirectory().toString(),
-                String.format("encHashKeyFile_%s_%s_%s.txt", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp));
-        encryptedHashDataPath = Paths.get(this.parameters.getOutputDirectory().toString(),
-                String.format("enc_hashes_%s_%s_%s.csv", hashParameters.getSiteId(), hashParameters.getProjectId(), fileTimestamp));
-      }
-
-      Path[] allFilePaths = new Path[] { hashPath, crosswalkPath, invalidDataPath, combinedHashedUnhashedPath, encryptedHashKeyPath };
+      Path[] allFilePaths = new Path[] { hashPath, crosswalkPath, invalidDataPath };
 
       // Reset all of our tracking counters right before we begin the processing cycle
       this.numSubmittedJobs = 0;
@@ -229,97 +232,102 @@ public class Engine {
       this.numDerivedRows = 0;
       this.numInputRows = 0;
 
-      int batchSize = this.parameters.getBatchSize();
-      int numThreads = this.parameters.getNumWorkerThreads();
-      ArrayList<DataRow> batch = new ArrayList<DataRow>(batchSize);  // Pre-allocate the memory
-      for (CSVRecord csvRecord : parser) {
-        String patientId = csvRecord.get(patientIdIndex).trim();
-        // If the patient ID is empty, we're not going to track it (that'd be a false error if there are multiple
-        // blank fields on different rows).  Note that we're not throwing out the record as invalid at this point.  We
-        // probably could, but we're delegating all of that work to our worker steps.
-        if (!patientId.equals("")) {
-          if (uniquePatientIds.contains(patientId)) {
-            closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
-            deleteOutputFiles(allFilePaths);
-            threadPool.shutdownNow();
-            throw new LinkjaException(String.format("Patient IDs must be unique within the data file.  A duplicate copy of Patient ID %s was found on row %d.",
-                    patientId.trim(), csvRecord.getRecordNumber()));
-          }
-          uniquePatientIds.add(patientId);
-        }
+      AesEncryptParameters encryptParameters = null;
+      try {
+        encryptParameters = AesEncryptParameters.generate(AES_KEY_LENGTH, AES_IV_LENGTH, AES_AAD_LENGTH);
+        EncryptedHashFileMetadata metadata = initializeHashStream(hashStream, encryptParameters, parameters.getEncryptionKeyFile());
 
-        // We want to get our CSV data into a format that we can better act on within the application.  Load it to the
-        // data structure we created for this work.
-        DataRow row = csvRecordToDataRow(csvRecord);
-        batch.add(row);
-        this.numInputRows++;
-
-        // Once we have a batch of work to do, create a new processing task.
-        if (batch.size() == batchSize) {
-          batch.trimToSize();  // Free up unused space
-          taskQueue.submit(new EngineWorkerThread(batch, this.parameters.isRunNormalizationStep(),
-                  this.parameters.getRecordExclusionMode(), this.prefixes, this.suffixes, this.genericNames,
-                  this.hashParameters));
-          batch.clear();  // The worker thread has its copy, so we can clear ours out to start a new batch
-          this.numSubmittedJobs++;
-
-          System.out.printf("Loaded %d records for hashing\r\n", csvRecord.getRecordNumber());
-
-          // As we submit a new batch to be worked on, we will look to see if we're exceeding the number of threads we
-          // wanted to have running.  If so, we'll start clearing up results (if they are done) and writing them up, which
-          // will keep memory usage manageable.
-          while (((ThreadPoolExecutor) threadPool).getActiveCount() >= numThreads) {
-            if (!processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter, false)) {
-              // If there was a problem during the middle of the processing cycle, we have to stop work since we can't
-              // rely on our results.
-              threadPool.shutdownNow();
-              closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
+        int batchSize = this.parameters.getBatchSize();
+        int numThreads = this.parameters.getNumWorkerThreads();
+        ArrayList<DataRow> batch = new ArrayList<DataRow>(batchSize);  // Pre-allocate the memory
+        for (CSVRecord csvRecord : parser) {
+          String patientId = csvRecord.get(patientIdIndex).trim();
+          // If the patient ID is empty, we're not going to track it (that'd be a false error if there are multiple
+          // blank fields on different rows).  Note that we're not throwing out the record as invalid at this point.  We
+          // probably could, but we're delegating all of that work to our worker steps.
+          if (!patientId.equals("")) {
+            if (uniquePatientIds.contains(patientId)) {
+              closeWriters(hashStream, crosswalkWriter, invalidDataWriter);
               deleteOutputFiles(allFilePaths);
-              return;
+              threadPool.shutdownNow();
+              throw new LinkjaException(String.format("Patient IDs must be unique within the data file.  A duplicate copy of Patient ID %s was found on row %d.",
+                patientId.trim(), csvRecord.getRecordNumber()));
+            }
+            uniquePatientIds.add(patientId);
+          }
+
+          // We want to get our CSV data into a format that we can better act on within the application.  Load it to the
+          // data structure we created for this work.
+          DataRow row = csvRecordToDataRow(csvRecord);
+          batch.add(row);
+          this.numInputRows++;
+
+          // Once we have a batch of work to do, create a new processing task.
+          if (batch.size() == batchSize) {
+            batch.trimToSize();  // Free up unused space
+            taskQueue.submit(new EngineWorkerThread(batch, this.parameters.isRunNormalizationStep(),
+              this.parameters.isEncryptingOutput(), this.parameters.getRecordExclusionMode(),
+              this.prefixes, this.suffixes, this.genericNames, this.fieldIds, this.hashParameters, encryptParameters));
+            batch.clear();  // The worker thread has its copy, so we can clear ours out to start a new batch
+            this.numSubmittedJobs++;
+
+            System.out.printf("Loaded %d records for hashing\r\n", csvRecord.getRecordNumber());
+
+            // As we submit a new batch to be worked on, we will look to see if we're exceeding the number of threads we
+            // wanted to have running.  If so, we'll start clearing up results (if they are done) and writing them up, which
+            // will keep memory usage manageable.
+            while (((ThreadPoolExecutor) threadPool).getActiveCount() >= numThreads) {
+              if (!processPendingWork(taskQueue, hashStream, crosswalkPrinter, invalidDataPrinter, false)) {
+                // If there was a problem during the middle of the processing cycle, we have to stop work since we can't
+                // rely on our results.
+                threadPool.shutdownNow();
+                closeWriters(hashStream, crosswalkWriter, invalidDataWriter);
+                deleteOutputFiles(allFilePaths);
+                return;
+              }
             }
           }
         }
-      }
 
-      // If we have a partial batch that was filled, make sure it gets submitted to the work queue
-      if (batch.size() > 0) {
-        batch.trimToSize();
-        taskQueue.submit(new EngineWorkerThread(batch, this.parameters.isRunNormalizationStep(),
-                this.parameters.getRecordExclusionMode(), this.prefixes, this.suffixes, this.genericNames,
-                this.hashParameters));
-        this.numSubmittedJobs++;
-      }
+        // If we have a partial batch that was filled, make sure it gets submitted to the work queue
+        if (batch.size() > 0) {
+          batch.trimToSize();
+          taskQueue.submit(new EngineWorkerThread(batch, this.parameters.isRunNormalizationStep(),
+            this.parameters.isEncryptingOutput(), this.parameters.getRecordExclusionMode(),
+            this.prefixes, this.suffixes, this.genericNames,
+            this.fieldIds, this.hashParameters, encryptParameters));
+          this.numSubmittedJobs++;
+        }
 
-      boolean finalProcessSucceeded = processPendingWork(taskQueue, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter, true);
-      closeWriters(hashWriter, crosswalkWriter, invalidDataWriter, combinedHashedUnhashedWriter);
+        boolean finalProcessSucceeded = processPendingWork(taskQueue, hashStream, crosswalkPrinter, invalidDataPrinter, true);
+        closeWriters(hashStream, crosswalkWriter, invalidDataWriter);
 
-      if (finalProcessSucceeded) {
-        executionReport.add("Completed processing results:");
-        executionReport.add(String.format("  %d data rows read", this.numInputRows));
-        int totalHashedRows = (this.numInputRows - this.numInvalidRows + this.numDerivedRows);
-        executionReport.add(String.format("  %d total hashed rows created", totalHashedRows));
-        executionReport.add(String.format("     %d original data rows hashed", (totalHashedRows - this.numDerivedRows)));
-        executionReport.add(String.format("     %d derived rows hashed", this.numDerivedRows));
-        executionReport.add(String.format("  %d invalid rows", this.numInvalidRows));
-
-        // If we are encrypting the hashed results, do that now
-        if (parameters.isEncryptingOutput()) {
-          try {
-            System.out.println("Preparing to encrypt hash file...");
-            CryptoHelper.AESParameters aesParameters = cryptoHelper.generateAESParameters();
-            cryptoHelper.encryptAES(aesParameters, hashPath.toFile(), encryptedHashDataPath.toFile());
-            cryptoHelper.rsaEncryptAES(aesParameters, encryptedHashKeyPath.toFile(), parameters.getEncryptionKeyFile());
-            System.out.println("Hash file encrypted");
-          } catch (Exception e) {
-            throw new LinkjaException("There was an error when trying to encrypt the hashed output.  The unencrypted hash files have been preserved.");
+        if (finalProcessSucceeded) {
+          // Everything worked out okay.  Because it isn't until the end that we know the total number of rows written,
+          // this is where we need to update the metadata in our output file to include the total number of rows.
+          int totalHashedRows = (this.numInputRows - this.numInvalidRows + this.numDerivedRows);
+          if (metadata != null) {
+            metadata.setNumHashRows(totalHashedRows + 1); // Add the header row
+            metadata.writeUpdatedNumHashRows(hashPath.toFile());
           }
+
+          executionReport.add("Completed processing results:");
+          executionReport.add(String.format("  %d data rows read", this.numInputRows));
+          executionReport.add(String.format("  %d total hashed rows created", totalHashedRows));
+          executionReport.add(String.format("     %d original data rows hashed", (totalHashedRows - this.numDerivedRows)));
+          executionReport.add(String.format("     %d derived rows hashed", this.numDerivedRows));
+          executionReport.add(String.format("  %d invalid rows", this.numInvalidRows));
+        } else {
+          deleteOutputFiles(allFilePaths);
+        }
+
+        threadPool.shutdown();
+      }
+      finally {
+        if (encryptParameters != null) {
+          encryptParameters.clear();
         }
       }
-      else {
-        deleteOutputFiles(allFilePaths);
-      }
-
-      threadPool.shutdown();
 
       // Ensure at this point (as a final sanity check) that all of our submitted jobs have been tracked to completion
       if (this.numCompletedJobs != this.numSubmittedJobs) {
@@ -351,14 +359,14 @@ public class Engine {
   /**
    * Check our queue of submitted work tasks and process the completed rows (writing them to our putput CSV).
    * @param taskQueue
-   * @param hashPrinter
+   * @param hashStream
    * @param crosswalkPrinter
    * @param invalidDataPrinter
    * @param waitUntilComplete
    * @return true if the work was processed, false if there was an error
    */
-  private boolean processPendingWork(ExecutorCompletionService<List<DataRow>> taskQueue, CSVPrinter hashPrinter,
-                                     CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter, CSVPrinter combinedHashedUnhashedPrinter,
+  private boolean processPendingWork(ExecutorCompletionService<List<DataRow>> taskQueue, BufferedOutputStream hashStream,
+                                     CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter,
                                      boolean waitUntilComplete) {
     try {
       // Go through at least once to check the status of our jobs and process pending results.  If the flag has been
@@ -373,7 +381,7 @@ public class Engine {
 
         Future<List<DataRow>> task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
         while (task != null) {
-          writeDataRowResults(task.get(), hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter);
+          writeDataRowResults(task.get(), hashStream, crosswalkPrinter, invalidDataPrinter);
           this.numCompletedJobs++;
           task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
         }
@@ -398,53 +406,35 @@ public class Engine {
   /**
    * Utility method to create the CSVPrinter object with the appropriate header columns (based on parameters on how
    * the Engine should run)
-    * @param writer An open file writer to connect the CSVPrinter to
+    * @param hashStream An open file writer to connect the CSVPrinter to
    * @return The instantiated CSVPrinter object
    * @throws IOException
    */
-  private CSVPrinter createHashPrinter(BufferedWriter writer) throws IOException {
-    return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
-            Engine.SITE_ID_FIELD,
-            Engine.PROJECT_ID_FIELD,
-            HashingStep.PIDHASH_FIELD,
-            // We need to generalize the labels for these hashes, so they don't disclose to an attacker additional
-            // information about their composition.  Comments show the actual field each is mapped to.
-            "hash1",  // HashingStep.FNAMELNAMEDOBSSN_FIELD
-            "hash2",  // HashingStep.FNAMELNAMEDOBSSN_FIELD
-            "hash3",  // HashingStep.LNAMEFNAMEDOBSSN_FIELD
-            "hash4",  // HashingStep.LNAMEFNAMEDOB_FIELD
-            "hash5",  // HashingStep.FNAMELNAMETDOBSSN_FIELD
-            "hash6",  // HashingStep.FNAMELNAMETDOB_FIELD
-            "hash7",  // HashingStep.FNAME3LNAMEDOBSSN_FIELD
-            "hash8",  // HashingStep.FNAME3LNAMEDOB_FIELD
-            "hash9",  // HashingStep.FNAMELNAMEDOBDSSN_FIELD
-            "hash10", // HashingStep.FNAMELNAMEDOBYSSN_FIELD
-            Engine.EXCLUSION));
+  private EncryptedHashFileMetadata initializeHashStream(BufferedOutputStream hashStream, AesEncryptParameters encryptParameters, File rsaPublicKey) throws IOException, LinkjaException {
+    EncryptedHashFileMetadata metadata = new EncryptedHashFileMetadata(this.hashParameters.getSiteId(), this.hashParameters.getProjectId(), 11, 0, encryptParameters);
+    metadata.write(hashStream, rsaPublicKey);
+
+    // Write the header as encrypted blocks
+    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.PIDHASH_FIELD);
+    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAMELNAMEDOBSSN_FIELD);
+    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAMELNAMEDOB_FIELD);
+    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.LNAMEFNAMEDOBSSN_FIELD);
+    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.LNAMEFNAMEDOB_FIELD);
+    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAMELNAMETDOBSSN_FIELD);
+    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAMELNAMETDOB_FIELD);
+    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAME3LNAMEDOBSSN_FIELD);
+    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAME3LNAMEDOB_FIELD);
+    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAMELNAMEDOBDSSN_FIELD);
+    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAMELNAMEDOBYSSN_FIELD);
+    return metadata;
   }
 
-  private CSVPrinter createCombinedHashedUnhashedPrinter(BufferedWriter writer) throws IOException {
-    return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
-            Engine.SITE_ID_FIELD,
-            Engine.PROJECT_ID_FIELD,
-            Engine.PATIENT_ID_FIELD,
-            Engine.FIRST_NAME_FIELD,
-            Engine.LAST_NAME_FIELD,
-            Engine.DATE_OF_BIRTH_FIELD,
-            Engine.SOCIAL_SECURITY_NUMBER,
-            HashingStep.PIDHASH_FIELD,
-            // We need to generalize the labels for these hashes, so they don't disclose to an attacker additional
-            // information about their composition.  Comments show the actual field each is mapped to.
-            "hash1",  // HashingStep.FNAMELNAMEDOBSSN_FIELD
-            "hash2",  // HashingStep.FNAMELNAMEDOBSSN_FIELD
-            "hash3",  // HashingStep.LNAMEFNAMEDOBSSN_FIELD
-            "hash4",  // HashingStep.LNAMEFNAMEDOB_FIELD
-            "hash5",  // HashingStep.FNAMELNAMETDOBSSN_FIELD
-            "hash6",  // HashingStep.FNAMELNAMETDOB_FIELD
-            "hash7",  // HashingStep.FNAME3LNAMEDOBSSN_FIELD
-            "hash8",  // HashingStep.FNAME3LNAMEDOB_FIELD
-            "hash9",  // HashingStep.FNAMELNAMEDOBDSSN_FIELD
-            "hash10", // HashingStep.FNAMELNAMEDOBYSSN_FIELD
-            Engine.EXCLUSION));
+  private void writeEncryptedHashHeader(BufferedOutputStream hashStream, AesEncryptParameters encryptParameters, String header) throws LinkjaException, IOException {
+    AesResult encryptResult = Library.aesEncrypt(StringUtils.rightPad(header, 128).getBytes(), encryptParameters.getAad(), encryptParameters.getKey(), encryptParameters.getIv());
+    if (encryptResult == null) {
+      throw new LinkjaException("Failed to encrypt hash header");
+    }
+    hashStream.write(ArrayUtils.addAll(encryptResult.data, encryptResult.tag));
   }
 
   /**
@@ -478,33 +468,33 @@ public class Engine {
 
   /**
    * Write out a collection of DataRow results
-   * @param hashPrinter
+   * @param hashStream
    * @param crosswalkPrinter
    * @param invalidDataPrinter
    * @param rows
    * @throws IOException
    */
-  private void writeDataRowResults(List<DataRow> rows, CSVPrinter hashPrinter,
-                                   CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter, CSVPrinter combinedHashedUnhashedPrinter) throws IOException {
+  private void writeDataRowResults(List<DataRow> rows, BufferedOutputStream hashStream,
+                                   CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter) throws IOException {
     if (rows == null) {
       return;
     }
 
     for (DataRow row : rows) {
-      writeDataRowResult(row, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter);
+      writeDataRowResult(row, hashStream, crosswalkPrinter, invalidDataPrinter);
     }
   }
 
   /**
    * Utility method to write out the appropriate columns for a data row.
-   * @param hashPrinter
+   * @param hashStream
    * @param crosswalkPrinter
    * @param invalidDataPrinter
    * @param row
    * @throws IOException
    */
-  private void writeDataRowResult(DataRow row, CSVPrinter hashPrinter,
-                                  CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter, CSVPrinter combinedHashedUnhashedPrinter) throws IOException {
+  private void writeDataRowResult(DataRow row, BufferedOutputStream hashStream,
+                                  CSVPrinter crosswalkPrinter, CSVPrinter invalidDataPrinter) throws IOException {
     if (row == null) {
       return;
     }
@@ -513,54 +503,25 @@ public class Engine {
     // potentially misleading during the matching phase, so we choose instead to not provide output for SSN-related hashes.
     boolean hasSsn = !(row.get(Engine.SOCIAL_SECURITY_NUMBER) == null || row.get(Engine.SOCIAL_SECURITY_NUMBER).equals(""));
     if (row.shouldProcess()) {
-      crosswalkPrinter.printRecord(row.get(Engine.PATIENT_ID_FIELD), row.get(HashingStep.PIDHASH_FIELD));
+      crosswalkPrinter.printRecord(row.get(Engine.PATIENT_ID_FIELD), row.get(EncryptionStep.PIDHASH_PLAINTEXT_FIELD));
 
-      hashPrinter.printRecord(
-              this.hashParameters.getSiteId(),
-              this.hashParameters.getProjectId(),
-              row.get(HashingStep.PIDHASH_FIELD),
-              hasSsn ? row.get(HashingStep.FNAMELNAMEDOBSSN_FIELD) : "",
-              row.get(HashingStep.FNAMELNAMEDOB_FIELD),
-              hasSsn ? row.get(HashingStep.LNAMEFNAMEDOBSSN_FIELD) : "",
-              row.get(HashingStep.LNAMEFNAMEDOB_FIELD),
-              hasSsn ? row.get(HashingStep.FNAMELNAMETDOBSSN_FIELD) : "",
-              row.get(HashingStep.FNAMELNAMETDOB_FIELD),
-              hasSsn ? row.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD) : "",
-              row.get(HashingStep.FNAME3LNAMEDOB_FIELD),
-              hasSsn ? row.get(HashingStep.FNAMELNAMEDOBDSSN_FIELD) : "",
-              hasSsn ? row.get(HashingStep.FNAMELNAMEDOBYSSN_FIELD) : "",
-              row.isException() ? "1" : "0"
-      );
-
-      if (parameters.isWriteUnhashedData()) {
-        combinedHashedUnhashedPrinter.printRecord(
-                this.hashParameters.getSiteId(),
-                this.hashParameters.getProjectId(),
-                row.get(Engine.PATIENT_ID_FIELD),
-                row.get(Engine.FIRST_NAME_FIELD),
-                row.get(Engine.LAST_NAME_FIELD),
-                row.get(Engine.DATE_OF_BIRTH_FIELD),
-                hasSsn ? row.get(Engine.SOCIAL_SECURITY_NUMBER) : "",
-                row.get(HashingStep.PIDHASH_FIELD),
-                hasSsn ? row.get(HashingStep.FNAMELNAMEDOBSSN_FIELD) : "",
-                row.get(HashingStep.FNAMELNAMEDOB_FIELD),
-                hasSsn ? row.get(HashingStep.LNAMEFNAMEDOBSSN_FIELD) : "",
-                row.get(HashingStep.LNAMEFNAMEDOB_FIELD),
-                hasSsn ? row.get(HashingStep.FNAMELNAMETDOBSSN_FIELD) : "",
-                row.get(HashingStep.FNAMELNAMETDOB_FIELD),
-                hasSsn ? row.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD) : "",
-                row.get(HashingStep.FNAME3LNAMEDOB_FIELD),
-                hasSsn ? row.get(HashingStep.FNAMELNAMEDOBDSSN_FIELD) : "",
-                hasSsn ? row.get(HashingStep.FNAMELNAMEDOBYSSN_FIELD) : "",
-                row.isException() ? "1" : "0"
-        );
-      }
+      hashStream.write(safeGetRowField(row, HashingStep.PIDHASH_FIELD));
+      hashStream.write(safeGetRowField(row, HashingStep.FNAMELNAMEDOBSSN_FIELD, hasSsn));
+      hashStream.write(safeGetRowField(row, HashingStep.FNAMELNAMEDOB_FIELD));
+      hashStream.write(safeGetRowField(row, HashingStep.LNAMEFNAMEDOBSSN_FIELD, hasSsn));
+      hashStream.write(safeGetRowField(row, HashingStep.LNAMEFNAMEDOB_FIELD));
+      hashStream.write(safeGetRowField(row, HashingStep.FNAMELNAMETDOBSSN_FIELD, hasSsn));
+      hashStream.write(safeGetRowField(row, HashingStep.FNAMELNAMETDOB_FIELD));
+      hashStream.write(safeGetRowField(row, HashingStep.FNAME3LNAMEDOBSSN_FIELD, hasSsn));
+      hashStream.write(safeGetRowField(row, HashingStep.FNAME3LNAMEDOB_FIELD));
+      hashStream.write(safeGetRowField(row, HashingStep.FNAMELNAMEDOBDSSN_FIELD, hasSsn));
+      hashStream.write(safeGetRowField(row, HashingStep.FNAMELNAMEDOBYSSN_FIELD, hasSsn));
 
       // Process all derived rows as well
       if (row.hasDerivedRows()) {
         for (DataRow derivedRow : row.getDerivedRows()) {
           this.numDerivedRows++;
-          writeDataRowResult(derivedRow, hashPrinter, crosswalkPrinter, invalidDataPrinter, combinedHashedUnhashedPrinter);
+          writeDataRowResult(derivedRow, hashStream, crosswalkPrinter, invalidDataPrinter);
         }
       }
     }
@@ -575,6 +536,17 @@ public class Engine {
               hasSsn ? row.get(Engine.SOCIAL_SECURITY_NUMBER) : "",
               row.getInvalidReason().replaceAll("\r\n", "|"));
     }
+  }
+
+  private byte[] safeGetRowField(DataRow row, String rowName) {
+    return safeGetRowField(row, rowName, true);
+  }
+
+  private byte[] safeGetRowField(DataRow row, String rowName, boolean shouldProcess) {
+    if (!shouldProcess || !row.containsKey(rowName)) {
+      return EMPTY_HASH;
+    }
+    return (byte[])row.get(rowName);
   }
 
   /**
@@ -594,7 +566,7 @@ public class Engine {
    */
   private void dumpRow(DataRow row, int indentLevel) {
     String indentString = new String(new char[indentLevel*2]).replace("\0", " ");
-    for (Map.Entry<String,String> entry : row.entrySet()) {
+    for (Map.Entry<String,Object> entry : row.entrySet()) {
       System.out.printf("%s%s - %s\r\n", indentString, entry.getKey(), entry.getValue());
     }
     if (row.getInvalidReason() != null && !row.getInvalidReason().equals("")) {
