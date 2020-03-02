@@ -141,7 +141,7 @@ class ValidationFilterStepTest {
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "12/12/1912");
-    row.put(Engine.SOCIAL_SECURITY_NUMBER, "333-33-3333");
+    row.put(Engine.SOCIAL_SECURITY_NUMBER, "333-43-5333");
 
     ValidationFilterStep step = new ValidationFilterStep();
     row = step.checkFieldFormat(row);
@@ -249,7 +249,7 @@ class ValidationFilterStepTest {
     row = step.run(row);
     assertNull(row.getInvalidReason());
 
-    row.put(Engine.SOCIAL_SECURITY_NUMBER, "333-33 3333");
+    row.put(Engine.SOCIAL_SECURITY_NUMBER, "333-33 4333");
     row = step.run(row);
     assertNull(row.getInvalidReason());
   }
@@ -342,10 +342,10 @@ class ValidationFilterStepTest {
   @Test
   void isValidSSNFormat_Valid() {
     ValidationFilterStep step = new ValidationFilterStep();
-    assert(step.isValidSSNFormat("123-45-6789"));   // 9 digits with hyphen delimiters
-    assert(step.isValidSSNFormat("123 45 6789"));   // 9 digits with space delimiters
-    assert(step.isValidSSNFormat("123 45-6789"));   // 9 digits with mixed delimiters
-    assert(step.isValidSSNFormat("123456789"));     // 9 digits with no delimiters
+    assert(step.isValidSSNFormat("123-45-6780"));   // 9 digits with hyphen delimiters
+    assert(step.isValidSSNFormat("123 45 6780"));   // 9 digits with space delimiters
+    assert(step.isValidSSNFormat("123 45-6780"));   // 9 digits with mixed delimiters
+    assert(step.isValidSSNFormat("123456780"));     // 9 digits with no delimiters
     assert(step.isValidSSNFormat("1234"));          // Has to be at least 4 characters
     assert(step.isValidSSNFormat("987456789"));     // Even though this is a TIN, we accept it
 
@@ -364,6 +364,10 @@ class ValidationFilterStepTest {
     assertFalse(step.isValidSSNFormat("123"));          // Too short
     assertFalse(step.isValidSSNFormat("123A"));         // Right length, but non-numeric character
     assertFalse(step.isValidSSNFormat("1234567890"));   // Too long
+
+    // http://www.dhs.state.il.us/page.aspx?item=14444
+    assertFalse(step.isValidSSNFormat("123456789"));   // Sequential numbers
+    assertFalse(step.isValidSSNFormat("444444444"));   // 9 identical digits
   }
 
   @Test
@@ -427,6 +431,8 @@ class ValidationFilterStepTest {
     ValidationFilterStep step = new ValidationFilterStep();
     assertFalse(step.isValidSSNFormat("078-05-1120"));
     assertFalse(step.isValidSSNFormat("078051120"));
+    assertFalse(step.isValidSSNFormat("123-45-6789"));
+    assertFalse(step.isValidSSNFormat("123456789"));
   }
 
   @Test

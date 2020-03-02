@@ -44,6 +44,12 @@ public class ValidationFilterStep implements IStep {
   public static final Pattern SSNRegex = Pattern.compile("^(?!000|999)[0-9]{0,3}[- ]?(?!00|99)[0-9]{0,2}[- ]?(?!0000|9999)[0-9]{4}$");
 
   /**
+   * Regex to determine if an SSN is a series of 9 repeating digits.  This will be used to filter out SSNs that meet
+   * this pattern, since 9 repeating digits is considered invalid.
+   */
+  public static final Pattern SSNRegexRepeating = Pattern.compile("^^(\\d)\\1{8}$");
+
+  /**
    * The minimum size of the SSN field to consider it valid
    */
   public static final int MIN_SSN_LENGTH = 4;
@@ -73,7 +79,8 @@ public class ValidationFilterStep implements IStep {
    * These must be formatted as 9 digits with no delimiters
    */
   public static final String[] BLACKLISTED_SSNS = new String[] {
-    "078051120"
+    "078051120",
+    "123456789"
   };
 
   @Override
@@ -291,7 +298,7 @@ public class ValidationFilterStep implements IStep {
       }
     }
 
-    return SSNRegex.matcher(strippedSSN).matches();
+    return SSNRegex.matcher(strippedSSN).matches() && !SSNRegexRepeating.matcher(strippedSSN).matches();
   }
 
   /**
