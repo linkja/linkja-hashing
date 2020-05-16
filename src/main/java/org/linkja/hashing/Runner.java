@@ -56,7 +56,9 @@ public class Runner {
     catch (Exception exc) {
       displayUsage();
       System.out.println();
-      System.out.println(exc.getMessage());
+      if (exc.getMessage() != null) {
+        System.out.println(exc.getMessage());
+      }
       System.exit(1);
     }
 
@@ -182,7 +184,7 @@ public class Runner {
     encryptionKeyFileOpt.setRequired(false);
     options.addOption(encryptionKeyFileOpt);
 
-    Option saltFileOpt = new Option("salt", "saltFile", true, "path to encrypted salt file");
+    Option saltFileOpt = new Option("salt", "saltFile", true, "path to salt file");
     saltFileOpt.setRequired(false);
     options.addOption(saltFileOpt);
 
@@ -232,7 +234,7 @@ public class Runner {
    */
   public static void displayUsage() {
     System.out.println();
-    System.out.println("Usage: java -jar Hashing.jar [--version]");
+    System.out.println("Usage: java -jar Hashing.jar [--version | --hashing]");
     System.out.println();
     System.out.println("HASHING");
     System.out.println("-------------");
