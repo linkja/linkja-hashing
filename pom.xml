@@ -6,7 +6,7 @@
 
     <groupId>org.linkja</groupId>
     <artifactId>Hashing</artifactId>
-    <version>0.8</version>
+    <version>0.9</version>
 
     <properties>
         <main.runnable.class>org.linkja.hashing.Runner</main.runnable.class>
@@ -126,6 +126,8 @@
                     <archive>
                         <manifest>
                             <mainClass>${main.runnable.class}</mainClass>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                         </manifest>
                     </archive>
                     <descriptorRefs>
@@ -153,6 +155,8 @@
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
                             <mainClass>${main.runnable.class}</mainClass>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                         </manifest>
                     </archive>
                 </configuration>

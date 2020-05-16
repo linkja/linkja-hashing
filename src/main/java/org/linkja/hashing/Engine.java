@@ -415,17 +415,19 @@ public class Engine {
     metadata.write(hashStream, rsaPublicKey);
 
     // Write the header as encrypted blocks
+    // We need to generalize the labels for these hashes, so they don't disclose to an attacker additional
+    // information about their composition.  Comments show the actual field each is mapped to.
     writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.PIDHASH_FIELD);
-    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAMELNAMEDOBSSN_FIELD);
-    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAMELNAMEDOB_FIELD);
-    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.LNAMEFNAMEDOBSSN_FIELD);
-    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.LNAMEFNAMEDOB_FIELD);
-    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAMELNAMETDOBSSN_FIELD);
-    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAMELNAMETDOB_FIELD);
-    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAME3LNAMEDOBSSN_FIELD);
-    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAME3LNAMEDOB_FIELD);
-    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAMELNAMEDOBDSSN_FIELD);
-    writeEncryptedHashHeader(hashStream, encryptParameters, HashingStep.FNAMELNAMEDOBYSSN_FIELD);
+    writeEncryptedHashHeader(hashStream, encryptParameters, "hash1");
+    writeEncryptedHashHeader(hashStream, encryptParameters, "hash2");
+    writeEncryptedHashHeader(hashStream, encryptParameters, "hash3");
+    writeEncryptedHashHeader(hashStream, encryptParameters, "hash4");
+    writeEncryptedHashHeader(hashStream, encryptParameters, "hash5");
+    writeEncryptedHashHeader(hashStream, encryptParameters, "hash6");
+    writeEncryptedHashHeader(hashStream, encryptParameters, "hash7");
+    writeEncryptedHashHeader(hashStream, encryptParameters, "hash8");
+    writeEncryptedHashHeader(hashStream, encryptParameters, "hash9");
+    writeEncryptedHashHeader(hashStream, encryptParameters, "hash10");
     return metadata;
   }
 

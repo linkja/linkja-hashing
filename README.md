@@ -26,8 +26,17 @@ You can build linkja-hashing via Maven:
 This will compile the code, run all unit tests, and create an executable JAR file under the .\target folder with all dependency JARs included.  The JAR will be named something like `Hashing-1.0-jar-with-dependencies.jar`.
 
 ## Program Use
-You can run the executable JAR file using the standard Java command:
-`java -jar Hashing-1.0-jar-with-dependencies.jar `
+You can run the executable JAR file (the one including `with-dependencies` in the file name) using the standard Java command:
+`java -jar <JAR path>`
+
+For encryption, linkja-hashing uses a special C library (.dll/.dylib/.so, depending on your operating system).  You will need to tell Java where to find this library when you try to run the program.  Otherwise, you will get an error:
+
+```
+Exception in thread "main" java.lang.UnsatisfiedLinkError: no linkjacrypto in java.library.path:
+```
+
+The library may be placed in any directory found by the Java library path.  If you would like to specify the library, you can include the `-Djava.library.path=` option when running the program.
+This can be the same directory as the linkja-hashing JAR file (e.g., `-Djava.library.path=.`).
 
 By default, the program will perform the hashing operations on an input file.  More information about the parameters needed to run hashing is shown below.
 
@@ -36,16 +45,16 @@ If you specify `--version`, the program will display the application version and
 Note that where files are used for input, they can be specified as a relative or absolute path.
 
 ### Hashing
-Usage: `java -jar Hashing-1.0-jar-with-dependencies.jar --hashing`
+Usage: `java -Djava.library.path=. -jar Hashing-1.0-jar-with-dependencies.jar --hashing`
 
 The program is expecting a minimum of four parameters:
 
 ```
- -date,--privateDate <arg>         The private date (as MM/DD/YYYY)
  -key,--encryptionKey <arg>        Path to the aggregator's public key file, to
                                    encrypt results.
- -patient,--patientFile <arg>      Path to the file containing patient data
  -salt,--saltFile <arg>            Path to the salt file
+ -patient,--patientFile <arg>      Path to the file containing patient data
+ -date,--privateDate <arg>         The private date (as MM/DD/YYYY)
 ```
 
 There are additional optional parameters that you may also specify:
@@ -55,27 +64,29 @@ There are additional optional parameters that you may also specify:
                                    specified, will use the current directory.
  -delim,--delimiter <arg>          The delimiter used within the patient data
                                    file. Uses a comma "," by default.
- --unhashed                        Write out the original unhashed data in the 
-                                   result file (for debugging). false by default.
- --unencrypted                     Write out the result file as unencrypted text
-                                   (for debugging). false by default.
 ```
 
 **Examples:**
 
+Display the version information
+
+```
+java -Djava.library.path=. -jar Hashing-1.0-jar-with-dependencies.jar --version
+```
+
 Required parameters specified
 
 ```
-java -jar Hashing-1.0-jar-with-dependencies.jar --hashing
-    --publicKey ./keys/public.key --saltFile ./data/project1_salt.txt
+java -Djava.library.path=. -jar Hashing-1.0-jar-with-dependencies.jar --hashing
+    --encryptionKey ./keys/public.key --saltFile ./data/project1_salt.txt
     --patientFile ./data/project1_patients.csv --privateDate 01/01/2018
 ```
 
 Pipe delimited file as input, and specify the output.  Also includes writing out the unhashed data as unencrypted text for debugging.
 
 ```
-java -jar Hashing-1.0-jar-with-dependencies.jar --hashing
-    --publicKey ./keys/public.key --saltFile ./data/project1_salt.txt
+java -Djava.library.path=. -jar Hashing-1.0-jar-with-dependencies.jar --hashing
+    --encryptionKey ./keys/public.key --saltFile ./data/project1_salt.txt
     --patientFile ./data/project1_patients.csv --privateDate 01/01/2018
-    --outDirectory ./data/output/ --delimiter | --unhashed --unencrypted
+    --outDirectory ./data/output/ --delimiter |
 ```
