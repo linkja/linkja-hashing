@@ -178,7 +178,7 @@ public class Runner {
     versionOpt.setRequired(false);
     options.addOption(versionOpt);
 
-    Option encryptionKeyFileOpt = new Option("enc", "encryptionKey", true, "path to public key file to encrypt hashed output");
+    Option encryptionKeyFileOpt = new Option("key", "encryptionKey", true, "path to public key file to encrypt hashed output");
     encryptionKeyFileOpt.setRequired(false);
     options.addOption(encryptionKeyFileOpt);
 
