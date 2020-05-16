@@ -7,6 +7,9 @@
 # Our convention for local stuff that should never be checked in
 **/local
 
+# Linkja output generated during testing
+src/main/resources/example/DONOTSEND*
+
 # Generated classes
 **/target
 
