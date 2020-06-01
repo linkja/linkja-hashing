@@ -156,16 +156,31 @@ public class HashingStep implements IStep {
     // Cache this so it doesn't have to be re-parsed each time.
     this.convertedDateOfBirth = LocalDate.parse((String)row.get(Engine.DATE_OF_BIRTH_FIELD), NormalizationStep.NORMALIZED_DATE_OF_BIRTH_FORMAT);
 
-    try {
-      //this.messageDigest = MessageDigest.getInstance("SHA-512");
-    } catch (Exception e) {
-      row.setInvalidReason(String.format("Failed to get an instance of the SHA-512 algorithm for hashing - %s",
-              e.getMessage()));
-    }
+//    try {
+//      //this.messageDigest = MessageDigest.getInstance("SHA-512");
+//    } catch (Exception e) {
+//      row.setInvalidReason(String.format("Failed to get an instance of the SHA-512 algorithm for hashing - %s",
+//              e.getMessage()));
+//    }
   }
 
-  private String getHashString(String hashInput, long rowNum, String tokenId) {
-    return Library.createSecureHash(hashInput, Long.toString(rowNum), tokenId).toUpperCase();
+  private String getHashString(String hashInput) {
+    return Library.hash(hashInput).toUpperCase();
+  }
+
+  /**
+   * Formats the patient ID so that it may be hashed
+   * @param row
+   * @return
+   */
+  public String patientIDString(DataRow row) {
+    long days = DAYS.between(this.convertedDateOfBirth, this.parameters.getPrivateDate());
+    String hashInput = String.format("%s%s%s%s%s%d%s%s",
+      this.patientIdFieldId, row.get(Engine.PATIENT_ID_FIELD),
+      this.siteIdFieldId, this.parameters.getSiteId(),
+      this.dateOffsetFieldId, days,
+      this.privateSaltFieldId, this.parameters.getPrivateSalt());
+    return hashInput;
   }
 
   /**
@@ -174,14 +189,22 @@ public class HashingStep implements IStep {
    * @return Modified data row with the PIDHASH_FIELD containing the hash
    */
   public DataRow patientIDHash(DataRow row) {
-    long days = DAYS.between(this.convertedDateOfBirth, this.parameters.getPrivateDate());
-    String hashInput = String.format("%s%s%s%s%s%d%s%s",
-            this.patientIdFieldId, row.get(Engine.PATIENT_ID_FIELD),
-            this.siteIdFieldId, this.parameters.getSiteId(),
-            this.dateOffsetFieldId, days,
-            this.privateSaltFieldId, this.parameters.getPrivateSalt());
-    row.put(PIDHASH_FIELD, getHashString(hashInput, row.getRowNumber(), PIDHASH_FIELD));
+    row.put(PIDHASH_FIELD, getHashString(patientIDString(row)));
     return row;
+  }
+
+  /**
+   * Formats the first name, last name, and DOB for hashing
+   * @param row
+   * @return
+   */
+  public String fnamelnamedobString(DataRow row) {
+    String hashInput = String.format("%s%s%s%s%s%s%s%s",
+      this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
+      this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
+      this.dobFieldId, row.get(Engine.DATE_OF_BIRTH_FIELD),
+      this.projectSaltFieldId, this.parameters.getProjectSalt());
+    return hashInput;
   }
 
   /**
@@ -190,13 +213,23 @@ public class HashingStep implements IStep {
    * @return Modified data row with the FNAMELNAMEDOB_FIELD containing the hash
    */
   public DataRow fnamelnamedobHash(DataRow row) {
-    String hashInput = String.format("%s%s%s%s%s%s%s%s",
-            this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
-            this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
-            this.dobFieldId, row.get(Engine.DATE_OF_BIRTH_FIELD),
-            this.projectSaltFieldId, this.parameters.getProjectSalt());
-    row.put(FNAMELNAMEDOB_FIELD, getHashString(hashInput, row.getRowNumber(), FNAMELNAMEDOB_FIELD));
+    row.put(FNAMELNAMEDOB_FIELD, getHashString(fnamelnamedobString(row)));
     return row;
+  }
+
+  /**
+   * Formats the first name, last name, DOB, and SSN for hashing
+   * @param row
+   * @return
+   */
+  public String fnamelnamedobssnString(DataRow row) {
+    String hashInput = String.format("%s%s%s%s%s%s%s%s%s%s",
+      this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
+      this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
+      this.dobFieldId, row.get(Engine.DATE_OF_BIRTH_FIELD),
+      this.ssnFieldId, row.get(Engine.SOCIAL_SECURITY_NUMBER),
+      this.projectSaltFieldId, this.parameters.getProjectSalt());
+    return hashInput;
   }
 
   /**
@@ -205,14 +238,23 @@ public class HashingStep implements IStep {
    * @return Modified data row with the FNAMELNAMEDOBSSN_FIELD containing the hash
    */
   public DataRow fnamelnamedobssnHash(DataRow row) {
-    String hashInput = String.format("%s%s%s%s%s%s%s%s%s%s",
-            this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
-            this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
-            this.dobFieldId, row.get(Engine.DATE_OF_BIRTH_FIELD),
-            this.ssnFieldId, row.get(Engine.SOCIAL_SECURITY_NUMBER),
-            this.projectSaltFieldId, this.parameters.getProjectSalt());
-    row.put(FNAMELNAMEDOBSSN_FIELD, getHashString(hashInput, row.getRowNumber(), FNAMELNAMEDOBSSN_FIELD));
+    row.put(FNAMELNAMEDOBSSN_FIELD, getHashString(fnamelnamedobssnString(row)));
     return row;
+  }
+
+  /**
+   * Format the last name, first name, DOB, and SSN for hashing
+   * @param row
+   * @return
+   */
+  public String lnamefnamedobssnString(DataRow row) {
+    String hashInput = String.format("%s%s%s%s%s%s%s%s%s%s",
+      this.firstNameFieldId, row.get(Engine.LAST_NAME_FIELD),
+      this.lastNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
+      this.dobFieldId, row.get(Engine.DATE_OF_BIRTH_FIELD),
+      this.ssnFieldId, row.get(Engine.SOCIAL_SECURITY_NUMBER),
+      this.projectSaltFieldId, this.parameters.getProjectSalt());
+    return hashInput;
   }
 
   /**
@@ -221,14 +263,22 @@ public class HashingStep implements IStep {
    * @return Modified data row with the LNAMEFNAMEDOBSSN_FIELD containing the hash
    */
   public DataRow lnamefnamedobssnHash(DataRow row) {
-    String hashInput = String.format("%s%s%s%s%s%s%s%s%s%s",
-            this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
-            this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
-            this.dobFieldId, row.get(Engine.DATE_OF_BIRTH_FIELD),
-            this.ssnFieldId, row.get(Engine.SOCIAL_SECURITY_NUMBER),
-            this.projectSaltFieldId, this.parameters.getProjectSalt());
-    row.put(LNAMEFNAMEDOBSSN_FIELD, getHashString(hashInput, row.getRowNumber(), LNAMEFNAMEDOBSSN_FIELD));
+    row.put(LNAMEFNAMEDOBSSN_FIELD, getHashString(lnamefnamedobssnString(row)));
     return row;
+  }
+
+  /**
+   * Format the last name, first name, and DOB for hashing
+   * @param row
+   * @return
+   */
+  public String lnamefnamedobString(DataRow row) {
+    String hashInput = String.format("%s%s%s%s%s%s%s%s",
+      this.firstNameFieldId, row.get(Engine.LAST_NAME_FIELD),
+      this.lastNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
+      this.dobFieldId, row.get(Engine.DATE_OF_BIRTH_FIELD),
+      this.projectSaltFieldId, this.parameters.getProjectSalt());
+    return hashInput;
   }
 
   /**
@@ -237,13 +287,23 @@ public class HashingStep implements IStep {
    * @return Modified data row with the LNAMEFNAMEDOB_FIELD containing the hash
    */
   public DataRow lnamefnamedobHash(DataRow row) {
-    String hashInput = String.format("%s%s%s%s%s%s%s%s",
-            this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
-            this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
-            this.dobFieldId, row.get(Engine.DATE_OF_BIRTH_FIELD),
-            this.projectSaltFieldId, this.parameters.getProjectSalt());
-    row.put(LNAMEFNAMEDOB_FIELD, getHashString(hashInput, row.getRowNumber(), LNAMEFNAMEDOB_FIELD));
+    row.put(LNAMEFNAMEDOB_FIELD, getHashString(lnamefnamedobString(row)));
     return row;
+  }
+
+  /**
+   * Format the the first name, last name, transposed DOB (YYYY-DD-MM), and SSN for hashing
+   * @param row
+   * @return
+   */
+  public String fnamelnameTdobssnString(DataRow row) {
+    String hashInput = String.format("%s%s%s%s%s%s%s%s%s%s",
+      this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
+      this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
+      this.dobFieldId, this.convertedDateOfBirth.format(TRANSPOSE_DAY_MONTH_FORMAT),
+      this.ssnFieldId, row.get(Engine.SOCIAL_SECURITY_NUMBER),
+      this.projectSaltFieldId, this.parameters.getProjectSalt());
+    return hashInput;
   }
 
   /**
@@ -252,14 +312,22 @@ public class HashingStep implements IStep {
    * @return Modified data row with the FNAMELNAMETDOBSSN_FIELD containing the hash
    */
   public DataRow fnamelnameTdobssnHash(DataRow row) {
-    String hashInput = String.format("%s%s%s%s%s%s%s%s%s%s",
-            this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
-            this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
-            this.dobFieldId, this.convertedDateOfBirth.format(TRANSPOSE_DAY_MONTH_FORMAT),
-            this.ssnFieldId, row.get(Engine.SOCIAL_SECURITY_NUMBER),
-            this.projectSaltFieldId, this.parameters.getProjectSalt());
-    row.put(FNAMELNAMETDOBSSN_FIELD, getHashString(hashInput, row.getRowNumber(), FNAMELNAMETDOBSSN_FIELD));
+    row.put(FNAMELNAMETDOBSSN_FIELD, getHashString(fnamelnameTdobssnString(row)));
     return row;
+  }
+
+  /**
+   * Format the first name, last name, and transposed DOB (YYYY-DD-MM) the hashing
+   * @param row
+   * @return
+   */
+  public String fnamelnameTdobString(DataRow row) {
+    String hashInput = String.format("%s%s%s%s%s%s%s%s",
+      this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
+      this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
+      this.dobFieldId, this.convertedDateOfBirth.format(TRANSPOSE_DAY_MONTH_FORMAT),
+      this.projectSaltFieldId, this.parameters.getProjectSalt());
+    return hashInput;
   }
 
   /**
@@ -268,13 +336,23 @@ public class HashingStep implements IStep {
    * @return Modified data row with the FNAMELNAMETDOB_FIELD containing the hash
    */
   public DataRow fnamelnameTdobHash(DataRow row) {
-    String hashInput = String.format("%s%s%s%s%s%s%s%s",
-            this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
-            this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
-            this.dobFieldId, this.convertedDateOfBirth.format(TRANSPOSE_DAY_MONTH_FORMAT),
-            this.projectSaltFieldId, this.parameters.getProjectSalt());
-    row.put(FNAMELNAMETDOB_FIELD, getHashString(hashInput, row.getRowNumber(), FNAMELNAMETDOB_FIELD));
+    row.put(FNAMELNAMETDOB_FIELD, getHashString(fnamelnameTdobString(row)));
     return row;
+  }
+
+  /**
+   * Format the first 3 characters of the first name, last name, DOB, and SSN for hashing
+   * @param row
+   * @return
+   */
+  public String fname3lnamedobssnString(DataRow row) {
+    String hashInput = String.format("%s%s%s%s%s%s%s%s%s%s",
+      this.firstNameFieldId, safeSubstring((String)row.get(Engine.FIRST_NAME_FIELD), 0, 3),
+      this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
+      this.dobFieldId, row.get(Engine.DATE_OF_BIRTH_FIELD),
+      this.ssnFieldId, row.get(Engine.SOCIAL_SECURITY_NUMBER),
+      this.projectSaltFieldId, this.parameters.getProjectSalt());
+    return hashInput;
   }
 
   /**
@@ -283,14 +361,22 @@ public class HashingStep implements IStep {
    * @return Modified data row with the FNAME3LNAMEDOBSSN_FIELD containing the hash
    */
   public DataRow fname3lnamedobssnHash(DataRow row) {
-    String hashInput = String.format("%s%s%s%s%s%s%s%s%s%s",
-            this.firstNameFieldId, safeSubstring((String)row.get(Engine.FIRST_NAME_FIELD), 0, 3),
-            this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
-            this.dobFieldId, row.get(Engine.DATE_OF_BIRTH_FIELD),
-            this.ssnFieldId, row.get(Engine.SOCIAL_SECURITY_NUMBER),
-            this.projectSaltFieldId, this.parameters.getProjectSalt());
-    row.put(FNAME3LNAMEDOBSSN_FIELD, getHashString(hashInput, row.getRowNumber(), FNAME3LNAMEDOBSSN_FIELD));
+    row.put(FNAME3LNAMEDOBSSN_FIELD, getHashString(fname3lnamedobssnString(row)));
     return row;
+  }
+
+  /**
+   * Format the first 3 characters of the first name, last name, and DOB for hashing
+   * @param row
+   * @return
+   */
+  public String fname3lnamedobString(DataRow row) {
+    String hashInput = String.format("%s%s%s%s%s%s%s%s",
+      this.firstNameFieldId, safeSubstring((String)row.get(Engine.FIRST_NAME_FIELD), 0, 3),
+      this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
+      this.dobFieldId, row.get(Engine.DATE_OF_BIRTH_FIELD),
+      this.projectSaltFieldId, this.parameters.getProjectSalt());
+    return hashInput;
   }
 
   /**
@@ -299,13 +385,23 @@ public class HashingStep implements IStep {
    * @return Modified data row with the FNAME3LNAMEDOB_FIELD containing the hash
    */
   public DataRow fname3lnamedobHash(DataRow row) {
-    String hashInput = String.format("%s%s%s%s%s%s%s%s",
-            this.firstNameFieldId, safeSubstring((String)row.get(Engine.FIRST_NAME_FIELD), 0, 3),
-            this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
-            this.dobFieldId, row.get(Engine.DATE_OF_BIRTH_FIELD),
-            this.projectSaltFieldId, this.parameters.getProjectSalt());
-    row.put(FNAME3LNAMEDOB_FIELD, getHashString(hashInput, row.getRowNumber(), FNAME3LNAMEDOB_FIELD));
+    row.put(FNAME3LNAMEDOB_FIELD, getHashString(fname3lnamedobString(row)));
     return row;
+  }
+
+  /**
+   * Format the first name, last name, DOB + 1 day, and SSN for hashing
+   * @param row
+   * @return
+   */
+  public String fnamelnamedobDssnString(DataRow row) {
+    String hashInput = String.format("%s%s%s%s%s%s%s%s%s%s",
+      this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
+      this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
+      this.dobFieldId, this.convertedDateOfBirth.plusDays(1).format(NormalizationStep.NORMALIZED_DATE_OF_BIRTH_FORMAT),
+      this.ssnFieldId, row.get(Engine.SOCIAL_SECURITY_NUMBER),
+      this.projectSaltFieldId, this.parameters.getProjectSalt());
+    return hashInput;
   }
 
   /**
@@ -314,14 +410,23 @@ public class HashingStep implements IStep {
    * @return Modified data row with the FNAMELNAMEDOBDSSN_FIELD containing the hash
    */
   public DataRow fnamelnamedobDssnHash(DataRow row) {
-    String hashInput = String.format("%s%s%s%s%s%s%s%s%s%s",
-            this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
-            this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
-            this.dobFieldId, this.convertedDateOfBirth.plusDays(1).format(NormalizationStep.NORMALIZED_DATE_OF_BIRTH_FORMAT),
-            this.ssnFieldId, row.get(Engine.SOCIAL_SECURITY_NUMBER),
-            this.projectSaltFieldId, this.parameters.getProjectSalt());
-    row.put(FNAMELNAMEDOBDSSN_FIELD, getHashString(hashInput, row.getRowNumber(), FNAMELNAMEDOBDSSN_FIELD));
+    row.put(FNAMELNAMEDOBDSSN_FIELD, getHashString(fnamelnamedobDssnString(row)));
     return row;
+  }
+
+  /**
+   * Return the first name, last name, DOB + 1 year, and SSN for hashing
+   * @param row
+   * @return
+   */
+  public String fnamelnamedobYssnString(DataRow row) {
+    String hashInput = String.format("%s%s%s%s%s%s%s%s%s%s",
+      this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
+      this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
+      this.dobFieldId, this.convertedDateOfBirth.plusYears(1).format(NormalizationStep.NORMALIZED_DATE_OF_BIRTH_FORMAT),
+      this.ssnFieldId, row.get(Engine.SOCIAL_SECURITY_NUMBER),
+      this.projectSaltFieldId, this.parameters.getProjectSalt());
+    return hashInput;
   }
 
   /**
@@ -330,13 +435,7 @@ public class HashingStep implements IStep {
    * @return Modified data row with the FNAMELNAMEDOBYSSN_FIELD containing the hash
    */
   public DataRow fnamelnamedobYssnHash(DataRow row) {
-    String hashInput = String.format("%s%s%s%s%s%s%s%s%s%s",
-            this.firstNameFieldId, row.get(Engine.FIRST_NAME_FIELD),
-            this.lastNameFieldId, row.get(Engine.LAST_NAME_FIELD),
-            this.dobFieldId, this.convertedDateOfBirth.plusYears(1).format(NormalizationStep.NORMALIZED_DATE_OF_BIRTH_FORMAT),
-            this.ssnFieldId, row.get(Engine.SOCIAL_SECURITY_NUMBER),
-            this.projectSaltFieldId, this.parameters.getProjectSalt());
-    row.put(FNAMELNAMEDOBYSSN_FIELD, getHashString(hashInput, row.getRowNumber(), FNAMELNAMEDOBYSSN_FIELD));
+    row.put(FNAMELNAMEDOBYSSN_FIELD, getHashString(fnamelnamedobYssnString(row)));
     return row;
   }
 

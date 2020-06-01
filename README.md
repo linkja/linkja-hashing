@@ -45,7 +45,7 @@ If you specify `--version`, the program will display the application version and
 Note that where files are used for input, they can be specified as a relative or absolute path.
 
 ### Hashing
-Usage: `java -Djava.library.path=. -jar Hashing-1.0-jar-with-dependencies.jar --hashing`
+Usage: `java -Djava.library.path=. -jar Hashing-1.0-jar-with-dependencies.jar`
 
 The program is expecting a minimum of four parameters:
 
@@ -77,7 +77,7 @@ java -Djava.library.path=. -jar Hashing-1.0-jar-with-dependencies.jar --version
 Required parameters specified
 
 ```
-java -Djava.library.path=. -jar Hashing-1.0-jar-with-dependencies.jar --hashing
+java -Djava.library.path=. -jar Hashing-1.0-jar-with-dependencies.jar
     --encryptionKey ./keys/public.key --saltFile ./data/project1_salt.txt
     --patientFile ./data/project1_patients.csv --privateDate 01/01/2018
 ```
@@ -85,7 +85,7 @@ java -Djava.library.path=. -jar Hashing-1.0-jar-with-dependencies.jar --hashing
 Pipe delimited file as input, and specify the output.  Also includes writing out the unhashed data as unencrypted text for debugging.
 
 ```
-java -Djava.library.path=. -jar Hashing-1.0-jar-with-dependencies.jar --hashing
+java -Djava.library.path=. -jar Hashing-1.0-jar-with-dependencies.jar
     --encryptionKey ./keys/public.key --saltFile ./data/project1_salt.txt
     --patientFile ./data/project1_patients.csv --privateDate 01/01/2018
     --outDirectory ./data/output/ --delimiter |
