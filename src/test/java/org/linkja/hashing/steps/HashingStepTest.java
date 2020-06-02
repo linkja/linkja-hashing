@@ -150,7 +150,7 @@ class HashingStepTest {
   @Test
   // SQL Equivalent:
   // SELECT dbo.fnHashBytes2(CONCAT('12345','3',datediff(dd,'1950-01-01','2000-01-01')),'9876543210987')  -- PIDHASH
-  void patientIDHash() {
+  void patientIDStringAndHash() {
     DataRow row = new DataRow();
     row.put(Engine.PATIENT_ID_FIELD, "12345");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-01-01");
@@ -162,94 +162,104 @@ class HashingStepTest {
 
     HashingStep step = new HashingStep(parameters, fieldIds);
     step.cacheConvertedData(row);
+    assertEquals("PID12345SID3DOF18262PVS9876543210987", step.patientIDString(row));
     row = step.patientIDHash(row);
-    assertEquals("41299F409E2015868B7F4A6FCCF7FB9366F4F8960AB2DC48F56E6BE3360AF06F16A49F9492DA04D49CDA329B0E83652EC6FA8C8C999BAA190A4249DA68664E61",
+    assertEquals("7FA89170C43208C29EF4ABE50373AFE3EC577CDFA3118F46955FB266C17915C0",
+    //SHA-512: assertEquals("EF07138D9C0FBF62FD10CC2D88F35BACCD4CF9C6469F0A3A517D43DEEF5210B8D4C717C10E8D8C61DB37A79A1E43A67EE33D753663FCA047C5F950C9637D7669",
             row.get(HashingStep.PIDHASH_FIELD));
   }
 
   @Test
   // SQL Equivalent:
-  // SELECT dbo.fnHashBytes2(CAST(CONCAT('JON','DOE','1950-06-06') as varchar(max)),'0123456789123') -- fnamelnamedob
-  void fnamelnamedobHash() {
+  // SELECT dbo.fnHashBytes2(CAST(CONCAT('JON','DOE','1950-07-06') as varchar(max)),'0123456789123') -- fnamelnamedob
+  void fnamelnamedobStringAndHash() {
     DataRow row = new DataRow();
     row.put(Engine.PATIENT_ID_FIELD, "12345");
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
-    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-07-06");
     HashParameters parameters = new HashParameters();
     parameters.setPrivateSalt("9876543210987");
     parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters, fieldIds);
     step.cacheConvertedData(row);
+    assertEquals("FNJONLNDOEDOB1950-07-06PRS0123456789123", step.fnamelnamedobString(row));
     row = step.fnamelnamedobHash(row);
-    assertEquals("F57057F4506D03DF9249674FCDF1D5A2BDA4F17C859F19A566FA6156942A412430AC0CB315C3CC523C404629586D3FD14C0B0493B611C6084BD9FFE61A6BA682",
+    assertEquals("176C55BB94C43918D6CEEFE77C4E1B45EB162ABD33194EACA15E96AF75C36280",
+    //SHA-512: assertEquals("A1953D96314C5B48B2CF274910DA2A9B542A5457E552F63574D13989DC236A884ECF2CAF4D229EDB7313B38B881B4CB441A24B7517A6BB98070BE0C4ADC9266F",
             row.get(HashingStep.FNAMELNAMEDOB_FIELD));
   }
 
   @Test
   // SQL Equivalent:
-  // SELECT dbo.fnHashBytes2(CAST(CONCAT('JON','DOE','1950-06-06','5555') as varchar(max)),'0123456789123') -- fnamelnamedobssn
-  void fnamelnamedobssnHash() {
+  // SELECT dbo.fnHashBytes2(CAST(CONCAT('JON','DOE','1950-07-06','5678') as varchar(max)),'0123456789123') -- fnamelnamedobssn
+  void fnamelnamedobssnStringAndHash() {
     DataRow row = new DataRow();
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
-    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
-    row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-07-06");
+    row.put(Engine.SOCIAL_SECURITY_NUMBER, "5678");
     HashParameters parameters = new HashParameters();
     parameters.setPrivateSalt("9876543210987");
     parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters, fieldIds);
     step.cacheConvertedData(row);
+    assertEquals("FNJONLNDOEDOB1950-07-06SSN5678PRS0123456789123", step.fnamelnamedobssnString(row));
     row = step.fnamelnamedobssnHash(row);
-    assertEquals("F71B1874AD662FEF3DF4CBE7D898FA5136CB6B28F45AA07F37111B45582EC844B11AEE604944412D55040AF9F360B0C07A536B4226231D71DDC2E3BE06790EA0",
+    assertEquals("93C47F2FF4B02EA852B5AF19FA2793774E24EDD75EBEB161BBA0307DBE06AB01",
+    //SHA-512: assertEquals("8C74329D89AD668297B624C609A5F4B43F4C4B715495360D34BA1B9F01FE90E05887AF81F3F02052BC9BF554854566752ADB1F136D5B1798F8AF8240356A96BE",
             row.get(HashingStep.FNAMELNAMEDOBSSN_FIELD));
   }
 
   @Test
   // SQL Equivalent:
-  // SELECT dbo.fnHashBytes2(CAST(CONCAT('DOE','JON','1950-06-06','5555') as varchar(max)),'0123456789123') -- lnamefnamedobssn
-  void lnamefnamedobssnHash() {
+  // SELECT dbo.fnHashBytes2(CAST(CONCAT('DOE','JON','1950-07-06','5678') as varchar(max)),'0123456789123') -- lnamefnamedobssn
+  void lnamefnamedobssnStringAndHash() {
     DataRow row = new DataRow();
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
-    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
-    row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-07-06");
+    row.put(Engine.SOCIAL_SECURITY_NUMBER, "5678");
     HashParameters parameters = new HashParameters();
     parameters.setPrivateSalt("9876543210987");
     parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters, fieldIds);
     step.cacheConvertedData(row);
+    assertEquals("FNDOELNJONDOB1950-07-06SSN5678PRS0123456789123", step.lnamefnamedobssnString(row));
     row = step.lnamefnamedobssnHash(row);
-    assertEquals("082732F202BA86C16858AC415B2977E218FD7AD68807B1D7DEB1D1D60B84959E8FF0FCB4D9D997D31F09404C1FD6254D547A0D3B98632339329CBF2C2DBD347A",
+    assertEquals("0924C83CF59F4EB1C9440579ABE6D2AB644BF4A3B4508BAEEF8EB8CD6666A862",
+    //SHA-512: assertEquals("D433E574BC796869453EC88E6A1CF0662F6E4725F65638FFBE81BE01ADFCF2FC2D7B0670C433AFDAB172CE17F1D5DB1677795A7305E1B4EAF4C4350CFCD399F2",
             row.get(HashingStep.LNAMEFNAMEDOBSSN_FIELD));
   }
 
   @Test
   // SQL Equivalent:
-  // SELECT dbo.fnHashBytes2(CAST(CONCAT('DOE','JON','1950-06-06') as varchar(max)),'0123456789123') -- lnamefnamedob
-  void lnamefnamedobHash() {
+  // SELECT dbo.fnHashBytes2(CAST(CONCAT('DOE','JON','1950-07-06') as varchar(max)),'0123456789123') -- lnamefnamedob
+  void lnamefnamedobStringAndHash() {
     DataRow row = new DataRow();
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
-    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-07-06");
     HashParameters parameters = new HashParameters();
     parameters.setPrivateSalt("9876543210987");
     parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters, fieldIds);
     step.cacheConvertedData(row);
+    assertEquals("FNDOELNJONDOB1950-07-06PRS0123456789123", step.lnamefnamedobString(row));
     row = step.lnamefnamedobHash(row);
-    assertEquals("F1F313FFFABBE58A6B1261765A8250713BA031A6865795B008788EF0623AD814BFC810C636A532CA2A7C4A5111621F4EBAFD7BE598A191B62422773AA5D51D90",
+    assertEquals("58E0E49A037B32152A10948F8BBC82AE7E8DDCC9A1949D030AC922C765D39F6E",
+    //SHA-512: assertEquals("BCCC7BD1F076520FA1F8E1EFA46F279003E0C9371DEE6B482366D68C9B5A3C2C356D5D7BC2AB89604694608A880AA06E531002D0F2A43665D1128445B9C92F88",
             row.get(HashingStep.LNAMEFNAMEDOB_FIELD));
   }
 
   @Test
   // SQL Equivalent:
   // SELECT dbo.fnHashBytes2(CAST(CONCAT('JON','DOE',dbo.fnFormatDate('1950-12-15','YYYY-DD-MM')) as varchar(max)),'0123456789123') -- fnamelnameTdob
-  void fnamelnameTdobHash() {
+  void fnamelnameTdobStringAndHash() {
     DataRow row = new DataRow();
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
@@ -260,78 +270,86 @@ class HashingStepTest {
 
     HashingStep step = new HashingStep(parameters, fieldIds);
     step.cacheConvertedData(row);
+    assertEquals("FNJONLNDOEDOB1950-15-12PRS0123456789123", step.fnamelnameTdobString(row));
     row = step.fnamelnameTdobHash(row);
-    assertEquals("80A12218B086AE28BA86A3170C0381B6C168EB073EAB549462044A88BC77A3095B9507FFDE099515DB709255D7E93AEBA4F2334CA023276EE3AA8159A5187E66",
+    assertEquals("C64604ECD6E0D5AA9370CCC34354EC1A8EBC8307164886377297D3D2ED3B0F37",
+    //SHA-512: assertEquals("D81498A250E9324977A96637DE298745BCEB2619A0D5E31064327141BDED55CE515B0010B97F3C9C24EBF829DD1C1EA9D469A54D26899C6C767758D69612DEB8",
             row.get(HashingStep.FNAMELNAMETDOB_FIELD));
   }
 
   @Test
   // SQL Equivalent:
-  // SELECT dbo.fnHashBytes2(CAST(CONCAT('JON','DOE',dbo.fnFormatDate('1950-12-15','YYYY-DD-MM'), '5555') as varchar(max)),'0123456789123') -- fnamelnameTdobssn
-  void fnamelnameTdobssnHash() {
+  // SELECT dbo.fnHashBytes2(CAST(CONCAT('JON','DOE',dbo.fnFormatDate('1950-12-15','YYYY-DD-MM'), '5678') as varchar(max)),'0123456789123') -- fnamelnameTdobssn
+  void fnamelnameTdobssnStringAndHash() {
     DataRow row = new DataRow();
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-12-15");
-    row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
+    row.put(Engine.SOCIAL_SECURITY_NUMBER, "5678");
     HashParameters parameters = new HashParameters();
     parameters.setPrivateSalt("9876543210987");
     parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters, fieldIds);
     step.cacheConvertedData(row);
+    assertEquals("FNJONLNDOEDOB1950-15-12SSN5678PRS0123456789123", step.fnamelnameTdobssnString(row));
     row = step.fnamelnameTdobssnHash(row);
-    assertEquals("A79E0F043B6468A0BAE1474E2015689E8602EBDF9A54A8ECAD5B888B84492CF8964B2CACE0826989E24335CC462FDAE4972BEA608CEEF5AFC6D312B280B90728",
+    assertEquals("F9041232BB11E995FF9BEA0A5995474BB045FA0C3067DBE7CFF3AE9AA3A7F01A",
+    //SHA-512: assertEquals("2D9B2DBB074E557E9A573F892BCA53A9D7A30123B879FEE73940A44C402686F01CC5B7FBC1937DF3CC6B39917B51D383B9622C3A11A9B0D1F616E638F9A3A8D1",
             row.get(HashingStep.FNAMELNAMETDOBSSN_FIELD));
   }
 
   @Test
   // SQL Equivalent:
-  // SELECT dbo.fnHashBytes2(CAST(CONCAT(substring('JONATHAN',1,3),'DOUGH','1950-06-06','5555') as varchar(max)),'0123456789123') -- fname3lnamedobssn
-  void fname3lnamedobssnHash() {
+  // SELECT dbo.fnHashBytes2(CAST(CONCAT(substring('JONATHAN',1,3),'DOUGH','1950-07-06','5678') as varchar(max)),'0123456789123') -- fname3lnamedobssn
+  void fname3lnamedobssnStringAndHash() {
     DataRow row = new DataRow();
     row.put(Engine.FIRST_NAME_FIELD, "JONATHAN");
     row.put(Engine.LAST_NAME_FIELD, "DOUGH");
-    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
-    row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-07-06");
+    row.put(Engine.SOCIAL_SECURITY_NUMBER, "5678");
     HashParameters parameters = new HashParameters();
     parameters.setPrivateSalt("9876543210987");
     parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters, fieldIds);
     step.cacheConvertedData(row);
+    assertEquals("FNJONLNDOUGHDOB1950-07-06SSN5678PRS0123456789123", step.fname3lnamedobssnString(row));
     row = step.fname3lnamedobssnHash(row);
-    assertEquals("63C5C250769DCD54A947B4504C8D3FC143E3C2BA008D028C5BC7A3FC0D9E1F9C31F41EEA695B17222AECD13693F1630F67EAFBAF2C40A22EC6737F33714B539B",
+    assertEquals("D3D5F9A135C314E467604AF40A99898E96E81DFC12E7E9CA118C26287E910196",
+    //SHA-512: assertEquals("0B2A8F39E1B505A6119951442ECF90A816BC611A359855619779C5734709B9A33B246769D69D4D82C3C1A4D69E503D2684DF27E71D5DDD5E189B5E232D478B7E",
             row.get(HashingStep.FNAME3LNAMEDOBSSN_FIELD));
   }
 
   @Test
   // SQL Equivalent:
-  // SELECT dbo.fnHashBytes2(CAST(CONCAT(substring('JONATHAN',1,3),'DOUGH','1950-06-06') as varchar(max)),'0123456789123')   -- fname3lnamedob
-  void fnamelname3dobHash() {
+  // SELECT dbo.fnHashBytes2(CAST(CONCAT(substring('JONATHAN',1,3),'DOUGH','1950-07-06') as varchar(max)),'0123456789123')   -- fname3lnamedob
+  void fname3lnamedobHashAndHash() {
     DataRow row = new DataRow();
     row.put(Engine.FIRST_NAME_FIELD, "JONATHAN");
     row.put(Engine.LAST_NAME_FIELD, "DOUGH");
-    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-07-06");
     HashParameters parameters = new HashParameters();
     parameters.setPrivateSalt("9876543210987");
     parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters, fieldIds);
     step.cacheConvertedData(row);
+    assertEquals("FNJONLNDOUGHDOB1950-07-06PRS0123456789123", step.fname3lnamedobString(row));
     row = step.fname3lnamedobHash(row);
-    assertEquals("570864412E6325C0BB61F26483E91B9D87EB8DD279919FB2D8935C8814094E65BF2C8FBAB08A64244CA38F35C657EF35E87A2A8610F1A2B72DF991C440BFD84E",
+    assertEquals("646478B98CEF27AED6BD85AC9ED4C709D549EB8A227604E40EAB6B9066EFA56F",
+    //SHA-512: assertEquals("978E208B39306F0854074AAF6D113CD9DE082B96D9190A29B5A6D0661A45388A7324F2113626585078CF1004DB98B4E9A2DC63E1BECEDCC4BF42BA0A72E0D6C5",
             row.get(HashingStep.FNAME3LNAMEDOB_FIELD));
   }
 
   @Test
   // SQL Equivalent:
-  // SELECT dbo.fnHashBytes2(CAST(CONCAT('JON','DOE',dateadd(dd,1,cast('1950-06-06' as date)),'5555') as varchar(max)),'0123456789123') -- fnamelnamedobDssn
-  void fnamelnamedobDssnHash() {
+  // SELECT dbo.fnHashBytes2(CAST(CONCAT('JON','DOE',dateadd(dd,1,cast('1950-08-06' as date)),'5555') as varchar(max)),'0123456789123') -- fnamelnamedobDssn
+  void fnamelnamedobDssnStringAndHash() {
     DataRow row = new DataRow();
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
-    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-08-06");
     row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
     HashParameters parameters = new HashParameters();
     parameters.setPrivateSalt("9876543210987");
@@ -339,28 +357,32 @@ class HashingStepTest {
 
     HashingStep step = new HashingStep(parameters, fieldIds);
     step.cacheConvertedData(row);
+    assertEquals("FNJONLNDOEDOB1950-08-07SSN5555PRS0123456789123", step.fnamelnamedobDssnString(row));
     row = step.fnamelnamedobDssnHash(row);
-    assertEquals("CC09A7C2A811E72093F78737C25417FF938A2292992401D8AF08E513B35FDFD90F0F168A97A988308FDA0FA39F13D8D5B771A38D8BC44D6A7D464832C481D4D7",
+    assertEquals("2F1E4B75CB8C7D59A5847493938F73C6D5D194BB5A46D9DE531599E26C29662F",
+    //SHA-512: assertEquals("30E4590805B75C0F61368918DD01F47F2A9561B5AD7561ABDCC7EFEB7B00D0771E910467A971B45E3858205DA9F426832895C22EA8B37AC545B35674A280596B",
             row.get(HashingStep.FNAMELNAMEDOBDSSN_FIELD));
   }
 
   @Test
   // SQL Equivalent:
-  // SELECT dbo.fnHashBytes2(CAST(CONCAT('JON','DOE',dateadd(YYYY,1,cast('1950-06-06' as date)),'5555') as varchar(max)),'0123456789123') -- fnamelnamedobYssn
-  void fnamelnamedobYssnHash() {
+  // SELECT dbo.fnHashBytes2(CAST(CONCAT('JON','DOE',dateadd(YYYY,1,cast('1950-07-06' as date)),'5678') as varchar(max)),'0123456789123') -- fnamelnamedobYssn
+  void fnamelnamedobYssnStringAndHash() {
     DataRow row = new DataRow();
     row.put(Engine.FIRST_NAME_FIELD, "JON");
     row.put(Engine.LAST_NAME_FIELD, "DOE");
-    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-06-06");
-    row.put(Engine.SOCIAL_SECURITY_NUMBER, "5555");
+    row.put(Engine.DATE_OF_BIRTH_FIELD, "1950-07-06");
+    row.put(Engine.SOCIAL_SECURITY_NUMBER, "5678");
     HashParameters parameters = new HashParameters();
     parameters.setPrivateSalt("9876543210987");
     parameters.setProjectSalt("0123456789123");
 
     HashingStep step = new HashingStep(parameters, fieldIds);
     step.cacheConvertedData(row);
+    assertEquals("FNJONLNDOEDOB1951-07-06SSN5678PRS0123456789123", step.fnamelnamedobYssnString(row));
     row = step.fnamelnamedobYssnHash(row);
-    assertEquals("C56C7D37EC85598424B8952392A3CB61FFC22367026C81E44E12B8F1AADD2F6C897BBDADC31718549B071E02C6274886A136D59CE1B26312606E27630B8CDE61",
+    assertEquals("7100640859CECAE5B5AD47765EDC795EA867A9D5630A5CA2E4AF5F9125A30B7E",
+    //SHA-512: assertEquals("14DDF61465099F4BC5CBE02594C48DF512603DB34B3D21775BDD46ABBE1D1FCDA6D3613436A864743A7864CF8AD79CB65AC79C93C89FFF0EC995EA1CFA120516",
             row.get(HashingStep.FNAMELNAMEDOBYSSN_FIELD));
   }
 

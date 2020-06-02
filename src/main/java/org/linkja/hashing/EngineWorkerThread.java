@@ -14,29 +14,20 @@ import java.util.concurrent.Callable;
 public class EngineWorkerThread implements Callable<List<DataRow>> {
   private List<DataRow> dataRows;
   private boolean runNormalizationStep;
-  private boolean runEncryptionStep;
   private EngineParameters.RecordExclusionMode exclusionMode;
   private static ArrayList<String> prefixes = null;
   private static ArrayList<String> suffixes = null;
   private static HashMap<String, String> genericNames = null;
-  private static HashMap<String, String> fieldIds = null;
-  private static HashParameters hashParameters;
-  private static AesEncryptParameters encryptParameters = null;
 
-  public EngineWorkerThread(List<DataRow> dataRows, boolean runNormalizationStep, boolean runEncryptionStep,
+  public EngineWorkerThread(List<DataRow> dataRows, boolean runNormalizationStep,
                             EngineParameters.RecordExclusionMode exclusionMode,
-                            ArrayList<String> prefixes, ArrayList<String> suffixes, HashMap<String, String> genericNames,
-                            HashMap<String, String> fieldIds, HashParameters hashParameters, AesEncryptParameters encryptParameters) {
+                            ArrayList<String> prefixes, ArrayList<String> suffixes, HashMap<String, String> genericNames) {
     this.dataRows = new ArrayList<DataRow>(dataRows);
     this.runNormalizationStep = runNormalizationStep;
-    this.runEncryptionStep = runEncryptionStep;
     this.exclusionMode = exclusionMode;
     this.prefixes = prefixes;
     this.suffixes = suffixes;
     this.genericNames = genericNames;
-    this.fieldIds = fieldIds;
-    this.hashParameters = hashParameters;
-    this.encryptParameters = encryptParameters;
   }
 
   @Override
@@ -58,12 +49,6 @@ public class EngineWorkerThread implements Callable<List<DataRow>> {
     // TODO: We will want to make this a configuration option in the future
     steps.add(new PermuteStep(false));
 
-    steps.add(new HashingStep(this.hashParameters, this.fieldIds));
-
-    if (this.runEncryptionStep) {
-      steps.add(new EncryptionStep(this.encryptParameters));
-    }
-
     RecordProcessor processor = new RecordProcessor(steps);
     List<DataRow> results = new ArrayList<DataRow>();
     for (DataRow row : this.dataRows) {
@@ -77,8 +62,5 @@ public class EngineWorkerThread implements Callable<List<DataRow>> {
    * Perform any necessary resource cleanup once the thread is no longer needed.
    */
   public void cleanup() {
-    if (this.runEncryptionStep && this.encryptParameters != null) {
-      this.encryptParameters.clear();
-    }
   }
 }

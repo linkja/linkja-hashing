@@ -7,6 +7,9 @@
 # Our convention for local stuff that should never be checked in
 **/local
 
+# Convenience folder we set up for testing
+src/main/resources/example/data/
+
 # Linkja output generated during testing
 src/main/resources/example/DONOTSEND*
 

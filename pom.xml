@@ -6,7 +6,7 @@
 
     <groupId>org.linkja</groupId>
     <artifactId>Hashing</artifactId>
-    <version>0.9</version>
+    <version>1.0.0</version>
 
     <properties>
         <main.runnable.class>org.linkja.hashing.Runner</main.runnable.class>
@@ -81,12 +81,12 @@
         <dependency>
             <groupId>org.linkja</groupId>
             <artifactId>linkja-core</artifactId>
-            <version>1.0.7</version>
+            <version>1.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.linkja</groupId>
             <artifactId>linkja-crypto</artifactId>
-            <version>0.4.1</version>
+            <version>1.0.1</version>
         </dependency>
     </dependencies>
 

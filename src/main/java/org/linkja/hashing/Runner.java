@@ -234,9 +234,9 @@ public class Runner {
    */
   public static void displayUsage() {
     System.out.println();
-    System.out.println("Usage: java -jar Hashing.jar [--version | --hashing]");
+    System.out.println("Usage: java -jar Hashing.jar [--version]");
     System.out.println();
-    System.out.println("HASHING");
+    System.out.println("HASHING (Default Mode)");
     System.out.println("-------------");
     System.out.println("Required parameters:");
     System.out.println("  -date,--privateDate <arg>         The private date (as MM/DD/YYYY)");
