@@ -40,8 +40,19 @@ public class ValidationFilterStep implements IStep {
    *  - Allow hyphen or space delimiters (can be optional)
    *  - Exclude check for first 3 digits being 666 (check this separately)
    *  - Matches ranges of 4-9 numbers with optional delimiters
+   *
+   * Note that we are removing hyphen and space characters from the regex to simplify it. The first step in our
+   * process is to strip those characters, and so they aren't needed.
+   *
+   * We do allow regex of varying lengths.  We are assuming that any length <9 digits means we are getting the
+   * trailing SSN digits.  There is no way for us to know that for sure.
    */
-  public static final Pattern SSNRegex = Pattern.compile("^(?!000|999)[0-9]{0,3}[- ]?(?!00|99)[0-9]{0,2}[- ]?(?!0000|9999)[0-9]{4}$");
+  public static final Pattern SSN9Regex = Pattern.compile("^(?!000|999)[0-9]{3}(?!00)[0-9]{2}(?!0000|9999)[0-9]{4}$");
+  public static final Pattern SSN8Regex = Pattern.compile("^[0-9]{2}(?!00)[0-9]{2}(?!0000|9999)[0-9]{4}$");
+  public static final Pattern SSN7Regex = Pattern.compile("^[0-9](?!00)[0-9]{2}(?!0000|9999)[0-9]{4}$");
+  public static final Pattern SSN6Regex = Pattern.compile("^(?!00)[0-9]{2}(?!0000|9999)[0-9]{4}$");
+  public static final Pattern SSN5Regex = Pattern.compile("^[0-9](?!0000|9999)[0-9]{4}$");
+  public static final Pattern SSN4Regex = Pattern.compile("^(?!0000|9999)[0-9]{4}$");
 
   /**
    * Regex to determine if an SSN is a series of 9 repeating digits.  This will be used to filter out SSNs that meet
@@ -280,13 +291,15 @@ public class ValidationFilterStep implements IStep {
       return false;
     }
 
+    int strippedSSNLen = strippedSSN.length();
+
     // If it's beyond 9 characters, something is wrong - either too many digits or invalid delimiters.  Regardless,
     // we're done checking at this point.
-    if (strippedSSN.length() > 9) {
+    if (strippedSSNLen > 9) {
       return false;
     }
     // If it's 9 digits long, we need to check against our blacklist
-    else if (strippedSSN.length() == 9) {
+    else if (strippedSSNLen == 9) {
       boolean blacklisted = Arrays.stream(BLACKLISTED_SSNS).anyMatch(x -> x.equals(strippedSSN));
       if (blacklisted) {
         return false;
@@ -296,9 +309,26 @@ public class ValidationFilterStep implements IStep {
       if (strippedSSN.startsWith("666")) {
         return false;
       }
+
+      return SSN9Regex.matcher(strippedSSN).matches() && !SSNRegexRepeating.matcher(strippedSSN).matches();
+    }
+    else if (strippedSSNLen == 8) {
+      return SSN8Regex.matcher(strippedSSN).matches();
+    }
+    else if (strippedSSNLen == 7) {
+      return SSN7Regex.matcher(strippedSSN).matches();
+    }
+    else if (strippedSSNLen == 6) {
+      return SSN6Regex.matcher(strippedSSN).matches();
+    }
+    else if (strippedSSNLen == 5) {
+      return SSN5Regex.matcher(strippedSSN).matches();
+    }
+    else if (strippedSSNLen == 4) {
+      return SSN4Regex.matcher(strippedSSN).matches();
     }
 
-    return SSNRegex.matcher(strippedSSN).matches() && !SSNRegexRepeating.matcher(strippedSSN).matches();
+    return false;
   }
 
   /**

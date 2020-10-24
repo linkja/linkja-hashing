@@ -214,7 +214,7 @@ class ValidationFilterStepTest {
     row.put(Engine.FIRST_NAME_FIELD, "A");
     row.put(Engine.LAST_NAME_FIELD, "B");
     row.put(Engine.DATE_OF_BIRTH_FIELD, "12/12/1912");
-    row.put(Engine.SOCIAL_SECURITY_NUMBER, "3333");
+    row.put(Engine.SOCIAL_SECURITY_NUMBER, "3456");
     row = step.run(row);
     assertEquals("The following fields are missing or just contain whitespace.  They must be filled in: Patient Identifier\r\nThe following fields must be longer than 1 character: First Name, Last Name",
             row.getInvalidReason());
@@ -348,11 +348,22 @@ class ValidationFilterStepTest {
     assert(step.isValidSSNFormat("123456780"));     // 9 digits with no delimiters
     assert(step.isValidSSNFormat("1234"));          // Has to be at least 4 characters
     assert(step.isValidSSNFormat("987456789"));     // Even though this is a TIN, we accept it
+    assert(step.isValidSSNFormat(" - - 1234"));    // Allow multiple consecutive spaces/dashes
 
-    // Make sure our rule to exclude 666-**-**** don't flag these invalid
+    // Make sure our rule to exclude 666-**-**** doesn't flag these invalid
     assert(step.isValidSSNFormat("6667"));
     assert(step.isValidSSNFormat("66678"));
     assert(step.isValidSSNFormat("666789"));
+
+    // This is a specific check added 2020-10-20 in response to issues with SSN
+    // validation to make sure that we don't want the last segment to be considered
+    // invalid if it starts with two 9s.
+    assert(step.isValidSSNFormat("9900"));
+
+    // Trailing 0s are allowed, and make sure we account for 4-digits with leading space or hyphen
+    assert(step.isValidSSNFormat("0001"));
+    assert(step.isValidSSNFormat(" 0001"));
+    assert(step.isValidSSNFormat("-0001"));
   }
 
   @Test
@@ -377,11 +388,15 @@ class ValidationFilterStepTest {
     assertFalse(step.isValidSSNFormat("000-12-3456"));
     assertFalse(step.isValidSSNFormat("123-00-4567"));
     assertFalse(step.isValidSSNFormat("123-45-0000"));
+    assertFalse(step.isValidSSNFormat("45-0000"));
+    assertFalse(step.isValidSSNFormat("0000"));
     // Same checks, without delimiters
     assertFalse(step.isValidSSNFormat("000000000"));    // All 0s is a common invalid SSN in practice
     assertFalse(step.isValidSSNFormat("000123456"));
     assertFalse(step.isValidSSNFormat("123004567"));
     assertFalse(step.isValidSSNFormat("123450000"));
+    assertFalse(step.isValidSSNFormat("450000"));
+    assertFalse(step.isValidSSNFormat("0000"));
   }
 
   @Test
@@ -403,13 +418,19 @@ class ValidationFilterStepTest {
     ValidationFilterStep step = new ValidationFilterStep();
     assertFalse(step.isValidSSNFormat("999-99-9999"));  // All 9s is a common invalid SSN in practice
     assertFalse(step.isValidSSNFormat("999-12-3456"));
-    assertFalse(step.isValidSSNFormat("123-99-4567"));
     assertFalse(step.isValidSSNFormat("123-45-9999"));
+    assertFalse(step.isValidSSNFormat("45-9999"));
     // Same checks, without delimiters
     assertFalse(step.isValidSSNFormat("999999999"));    // All 9s is a common invalid SSN in practice
     assertFalse(step.isValidSSNFormat("999123456"));
-    assertFalse(step.isValidSSNFormat("123994567"));
     assertFalse(step.isValidSSNFormat("123459999"));
+    assertFalse(step.isValidSSNFormat("459999"));
+
+    // Correction - discovered an issue on 2020-10-20 where we are incorrectly flagging SSNs invalid if the
+    // middle segment is 99.  This is actually valid.  These tests are left in this same block, although they
+    // are set up to confirm that we will allow 99 in the middle block.
+    assertTrue(step.isValidSSNFormat("123-99-4567"));
+    assertTrue(step.isValidSSNFormat("123994567"));
   }
 
   @Test
@@ -418,12 +439,19 @@ class ValidationFilterStepTest {
     assertTrue(step.isValidSSNFormat("199-92-3456"));
     assertTrue(step.isValidSSNFormat("123-19-9567"));
     assertTrue(step.isValidSSNFormat("129-91-4567"));
+    assertTrue(step.isValidSSNFormat("9-91-4567"));
     assertTrue(step.isValidSSNFormat("123-49-9991"));
+    assertTrue(step.isValidSSNFormat("49-9991"));
+    assertTrue(step.isValidSSNFormat("9-9991"));
+
     // Same checks, without delimiters
     assertTrue(step.isValidSSNFormat("199923456"));
     assertTrue(step.isValidSSNFormat("123199567"));
     assertTrue(step.isValidSSNFormat("129914567"));
+    assertTrue(step.isValidSSNFormat("9914567"));
     assertTrue(step.isValidSSNFormat("123499991"));
+    assertTrue(step.isValidSSNFormat("499991"));
+    assertTrue(step.isValidSSNFormat("99991"));
   }
 
   @Test
