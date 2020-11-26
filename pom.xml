@@ -6,7 +6,7 @@
 
     <groupId>org.linkja</groupId>
     <artifactId>Hashing</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
 
     <properties>
         <main.runnable.class>org.linkja.hashing.Runner</main.runnable.class>
