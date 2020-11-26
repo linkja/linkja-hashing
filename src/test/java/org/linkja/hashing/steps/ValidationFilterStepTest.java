@@ -352,8 +352,7 @@ class ValidationFilterStepTest {
 
     // Make sure our rule to exclude 666-**-**** doesn't flag these invalid
     assert(step.isValidSSNFormat("6667"));
-    assert(step.isValidSSNFormat("66678"));
-    assert(step.isValidSSNFormat("666789"));
+    assert(step.isValidSSNFormat("166678901"));
 
     // This is a specific check added 2020-10-20 in response to issues with SSN
     // validation to make sure that we don't want the last segment to be considered
@@ -372,13 +371,27 @@ class ValidationFilterStepTest {
     assertFalse(step.isValidSSNFormat("Pretty obviously not valid"));
     assertFalse(step.isValidSSNFormat("1-2-3"));
     assertFalse(step.isValidSSNFormat("666-45-6789"));  // Can't start with 666
-    assertFalse(step.isValidSSNFormat("123"));          // Too short
     assertFalse(step.isValidSSNFormat("123A"));         // Right length, but non-numeric character
-    assertFalse(step.isValidSSNFormat("1234567890"));   // Too long
 
     // http://www.dhs.state.il.us/page.aspx?item=14444
     assertFalse(step.isValidSSNFormat("123456789"));   // Sequential numbers
     assertFalse(step.isValidSSNFormat("444444444"));   // 9 identical digits
+  }
+
+  @Test
+  void isValidSSNFormat_Length() {
+    // After removing valid delimiters, we should only ever allow 4 or 9-digit SSNs
+    ValidationFilterStep step = new ValidationFilterStep();
+    assertFalse(step.isValidSSNFormat("1"));
+    assertFalse(step.isValidSSNFormat("12"));
+    assertFalse(step.isValidSSNFormat("123"));
+    assertFalse(step.isValidSSNFormat("123 "));
+    assertFalse(step.isValidSSNFormat("12-3"));
+    assertFalse(step.isValidSSNFormat("12345"));
+    assertFalse(step.isValidSSNFormat("123456"));
+    assertFalse(step.isValidSSNFormat("1234567"));
+    assertFalse(step.isValidSSNFormat("12345678"));
+    assertFalse(step.isValidSSNFormat("1234567890"));
   }
 
   @Test
@@ -388,7 +401,6 @@ class ValidationFilterStepTest {
     assertFalse(step.isValidSSNFormat("000-12-3456"));
     assertFalse(step.isValidSSNFormat("123-00-4567"));
     assertFalse(step.isValidSSNFormat("123-45-0000"));
-    assertFalse(step.isValidSSNFormat("45-0000"));
     assertFalse(step.isValidSSNFormat("0000"));
     // Same checks, without delimiters
     assertFalse(step.isValidSSNFormat("000000000"));    // All 0s is a common invalid SSN in practice
@@ -419,12 +431,10 @@ class ValidationFilterStepTest {
     assertFalse(step.isValidSSNFormat("999-99-9999"));  // All 9s is a common invalid SSN in practice
     assertFalse(step.isValidSSNFormat("999-12-3456"));
     assertFalse(step.isValidSSNFormat("123-45-9999"));
-    assertFalse(step.isValidSSNFormat("45-9999"));
     // Same checks, without delimiters
     assertFalse(step.isValidSSNFormat("999999999"));    // All 9s is a common invalid SSN in practice
     assertFalse(step.isValidSSNFormat("999123456"));
     assertFalse(step.isValidSSNFormat("123459999"));
-    assertFalse(step.isValidSSNFormat("459999"));
 
     // Correction - discovered an issue on 2020-10-20 where we are incorrectly flagging SSNs invalid if the
     // middle segment is 99.  This is actually valid.  These tests are left in this same block, although they
@@ -439,19 +449,13 @@ class ValidationFilterStepTest {
     assertTrue(step.isValidSSNFormat("199-92-3456"));
     assertTrue(step.isValidSSNFormat("123-19-9567"));
     assertTrue(step.isValidSSNFormat("129-91-4567"));
-    assertTrue(step.isValidSSNFormat("9-91-4567"));
     assertTrue(step.isValidSSNFormat("123-49-9991"));
-    assertTrue(step.isValidSSNFormat("49-9991"));
-    assertTrue(step.isValidSSNFormat("9-9991"));
 
     // Same checks, without delimiters
     assertTrue(step.isValidSSNFormat("199923456"));
     assertTrue(step.isValidSSNFormat("123199567"));
     assertTrue(step.isValidSSNFormat("129914567"));
-    assertTrue(step.isValidSSNFormat("9914567"));
     assertTrue(step.isValidSSNFormat("123499991"));
-    assertTrue(step.isValidSSNFormat("499991"));
-    assertTrue(step.isValidSSNFormat("99991"));
   }
 
   @Test

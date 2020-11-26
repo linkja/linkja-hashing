@@ -33,13 +33,14 @@ public class ValidationFilterStep implements IStep {
   public static final String INVALID_SSN = "0000";
 
   /**
+   * After removing hypens and/or spaces, SSNs must be exactly 4 digits or 9 digits in length.
+   *
    * Regex to determine if SSN is valid
    * Adapted from 4.12. Validate Social Security Numbers, in "Regular Expressions Cookbook, 2nd Edition" with the
    * following changes:
    *  - Allow 900-999 (TINs)
    *  - Allow hyphen or space delimiters (can be optional)
    *  - Exclude check for first 3 digits being 666 (check this separately)
-   *  - Matches ranges of 4-9 numbers with optional delimiters
    *
    * Note that we are removing hyphen and space characters from the regex to simplify it. The first step in our
    * process is to strip those characters, and so they aren't needed.
@@ -48,10 +49,6 @@ public class ValidationFilterStep implements IStep {
    * trailing SSN digits.  There is no way for us to know that for sure.
    */
   public static final Pattern SSN9Regex = Pattern.compile("^(?!000|999)[0-9]{3}(?!00)[0-9]{2}(?!0000|9999)[0-9]{4}$");
-  public static final Pattern SSN8Regex = Pattern.compile("^[0-9]{2}(?!00)[0-9]{2}(?!0000|9999)[0-9]{4}$");
-  public static final Pattern SSN7Regex = Pattern.compile("^[0-9](?!00)[0-9]{2}(?!0000|9999)[0-9]{4}$");
-  public static final Pattern SSN6Regex = Pattern.compile("^(?!00)[0-9]{2}(?!0000|9999)[0-9]{4}$");
-  public static final Pattern SSN5Regex = Pattern.compile("^[0-9](?!0000|9999)[0-9]{4}$");
   public static final Pattern SSN4Regex = Pattern.compile("^(?!0000|9999)[0-9]{4}$");
 
   /**
@@ -64,6 +61,11 @@ public class ValidationFilterStep implements IStep {
    * The minimum size of the SSN field to consider it valid
    */
   public static final int MIN_SSN_LENGTH = 4;
+
+  /**
+   * The maximum size of the SSN field to consider it valid
+   */
+  public static final int MAX_SSN_LENGTH = 9;
 
   /**
    * Matches the patient identifier field against the following rules:
@@ -291,15 +293,13 @@ public class ValidationFilterStep implements IStep {
       return false;
     }
 
+    // At this point we are only considering valid potential SSNs that are exactly 4 or 9 digits in length.
+    // If it meets either of those lengths, we will do additional validation checks, otherwise we fall out
+    // and it's invalid.
     int strippedSSNLen = strippedSSN.length();
 
-    // If it's beyond 9 characters, something is wrong - either too many digits or invalid delimiters.  Regardless,
-    // we're done checking at this point.
-    if (strippedSSNLen > 9) {
-      return false;
-    }
     // If it's 9 digits long, we need to check against our blacklist
-    else if (strippedSSNLen == 9) {
+    if (strippedSSNLen == 9) {
       boolean blacklisted = Arrays.stream(BLACKLISTED_SSNS).anyMatch(x -> x.equals(strippedSSN));
       if (blacklisted) {
         return false;
@@ -312,19 +312,7 @@ public class ValidationFilterStep implements IStep {
 
       return SSN9Regex.matcher(strippedSSN).matches() && !SSNRegexRepeating.matcher(strippedSSN).matches();
     }
-    else if (strippedSSNLen == 8) {
-      return SSN8Regex.matcher(strippedSSN).matches();
-    }
-    else if (strippedSSNLen == 7) {
-      return SSN7Regex.matcher(strippedSSN).matches();
-    }
-    else if (strippedSSNLen == 6) {
-      return SSN6Regex.matcher(strippedSSN).matches();
-    }
-    else if (strippedSSNLen == 5) {
-      return SSN5Regex.matcher(strippedSSN).matches();
-    }
-    else if (strippedSSNLen == 4) {
+    else if (strippedSSNLen == MIN_SSN_LENGTH) {
       return SSN4Regex.matcher(strippedSSN).matches();
     }
 
