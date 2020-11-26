@@ -435,7 +435,6 @@ public class Engine {
   private CSVPrinter createCrosswalkPrinter(BufferedWriter writer) throws IOException {
     return new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
             Engine.PATIENT_ID_FIELD,
-            "OriginalHash",
             HashingStep.PIDHASH_FIELD));
   }
 
@@ -528,7 +527,7 @@ public class Engine {
 
         String securePidHash = getSecureHashString(safeGetRowField(row, HashingStep.PIDHASH_FIELD), sessionKey, rowIdString, "1");
         String auditablePidHash = Library.revertSecureHash(securePidHash, sessionKey, rowIdString, "1").toUpperCase();
-        crosswalkPrinter.printRecord(row.get(Engine.PATIENT_ID_FIELD), row.get(HashingStep.PIDHASH_FIELD), auditablePidHash);
+        crosswalkPrinter.printRecord(row.get(Engine.PATIENT_ID_FIELD), auditablePidHash);
 
         hashStream.write(securePidHash.getBytes());
         hashStream.write(getSecureHash(safeGetRowField(row, HashingStep.FNAMELNAMEDOBSSN_FIELD, hasSsn), sessionKey, rowIdString, "2"));
